@@ -8,7 +8,7 @@
 	health = 25
 	maxHealth = 25
 
-	bot_core = /obj/machinery/bot_core/floorbot
+	maints_access_required = list(ACCESS_ROBOTICS, ACCESS_CONSTRUCTION)
 	radio_key = /obj/item/encryptionkey/headset_eng
 	radio_channel = RADIO_CHANNEL_ENGINEERING
 	bot_type = FLOOR_BOT
@@ -333,10 +333,12 @@
 		if(do_after(src, 50, target = target_turf) && mode == BOT_REPAIRING)
 			if(autotile) //Build the floor and include a tile.
 				if(replacetiles && tilestack)
+					target_turf.PlaceOnTop(/turf/open/floor/plating, flags = CHANGETURF_INHERIT_AIR)	//make sure a hull is actually below the floor tile
 					tilestack.place_tile(target_turf)
 					if(!tilestack)
 						speak("Requesting refill of custom floor tiles to continue replacing.")
 				else
+					target_turf.PlaceOnTop(/turf/open/floor/plating, flags = CHANGETURF_INHERIT_AIR)	//make sure a hull is actually below the floor tile
 					target_turf.PlaceOnTop(/turf/open/floor/iron, flags = CHANGETURF_INHERIT_AIR)
 			else //Build a hull plating without a floor tile.
 				target_turf.PlaceOnTop(/turf/open/floor/plating, flags = CHANGETURF_INHERIT_AIR)
@@ -361,12 +363,20 @@
 				success = TRUE
 
 		if(success)
-			F = F.make_plating(TRUE) || F
-			if(was_replacing && tilestack)
+			var/area/is_this_maints = get_area(F)
+			if(was_replacing && tilestack)	//turn the tile into plating (if needed), then replace it
+				F = F.make_plating(TRUE) || F
 				tilestack.place_tile(F)
 				if(!tilestack)
 					speak("Requesting refill of custom floor tiles to continue replacing.")
-			else
+			else if(F.broken || F.burnt)	//repair the tile and reset it to be undamaged (rather than replacing it)
+				F.broken = FALSE
+				F.burnt = FALSE
+				F.icon_state = initial(F.icon_state)
+			else if(istype(is_this_maints, /area/maintenance))	//place catwalk if it's plating and we're in maints
+				F.PlaceOnTop(/turf/open/floor/catwalk_floor, flags = CHANGETURF_INHERIT_AIR)
+			else	//place normal tile if it's plating anywhere else
+				F = F.make_plating(TRUE) || F
 				F.PlaceOnTop(/turf/open/floor/iron, flags = CHANGETURF_INHERIT_AIR)
 
 	if(!QDELETED(src))
@@ -374,7 +384,7 @@
 
 /mob/living/simple_animal/bot/floorbot/update_icon_state()
 	. = ..()
-	icon_state = "[toolbox_color]floorbot[get_bot_flag(BOT_MODE_ON)]"
+	icon_state = "[toolbox_color]floorbot[get_bot_flag(bot_mode_flags, BOT_MODE_ON)]"
 
 /mob/living/simple_animal/bot/floorbot/explode()
 	bot_mode_flags &= ~BOT_MODE_ON
@@ -393,9 +403,6 @@
 
 	do_sparks(3, TRUE, src)
 	..()
-
-/obj/machinery/bot_core/floorbot
-	req_one_access = list(ACCESS_CONSTRUCTION, ACCESS_ROBOTICS)
 
 /mob/living/simple_animal/bot/floorbot/UnarmedAttack(atom/A, proximity_flag, list/modifiers)
 	if(HAS_TRAIT(src, TRAIT_HANDS_BLOCKED))
