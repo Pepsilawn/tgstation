@@ -150,7 +150,7 @@ Difficulty: Hard
  */
 /mob/living/simple_animal/hostile/megafauna/bubblegum/attackby(obj/item/W, mob/user, params)
 	. = ..()
-	if(istype(W, /obj/item/organ/tongue))
+	if(istype(W, /obj/item/organ/internal/tongue))
 		user.client?.give_award(/datum/award/achievement/misc/frenching, user)
 
 /mob/living/simple_animal/hostile/megafauna/bubblegum/proc/try_bloodattack()
@@ -378,10 +378,12 @@ Difficulty: Hard
 /obj/effect/temp_visual/bubblegum_hands/rightpaw
 	icon_state = "rightpawgrab"
 	layer = BELOW_MOB_LAYER
+	plane = GAME_PLANE
 
 /obj/effect/temp_visual/bubblegum_hands/leftpaw
 	icon_state = "leftpawgrab"
 	layer = BELOW_MOB_LAYER
+	plane = GAME_PLANE
 
 /obj/effect/temp_visual/bubblegum_hands/rightsmack
 	icon_state = "rightsmack"

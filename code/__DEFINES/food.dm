@@ -15,6 +15,8 @@
 #define CLOTH (1<<14)
 #define NUTS (1<<15)
 #define SEAFOOD (1<<16)
+#define ORANGES (1<<17)
+#define BUGS (1<<18)
 
 /// A list of food type names, in order of their flags
 #define FOOD_FLAGS list( \
@@ -35,6 +37,8 @@
 	"CLOTH", \
 	"NUTS", \
 	"SEAFOOD", \
+	"ORANGES", \
+	"BUGS", \
 )
 
 #define DRINK_NICE 1
@@ -115,4 +119,5 @@
 #define ICE_CREAM_BLAND "bland"
 
 #define DEFAULT_MAX_ICE_CREAM_SCOOPS 3
-
+// the vertical distance in pixels from an ice cream scoop and another.
+#define ICE_CREAM_SCOOP_OFFSET 4
