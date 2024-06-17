@@ -111,3 +111,60 @@
 		/obj/item/stack/sheet/iron/ten = 1,
 		)
 	generate_items_inside(items_inside, src)
+
+/obj/item/storage/box/evilmeds
+	name = "box of premium medicine"
+	desc = "Contains a large number of beakers filled with premium medical supplies. Straight from Interdyne Pharmaceutics!"
+	icon_state = "syndiebox"
+	illustration = "beaker"
+
+/obj/item/storage/box/evilmeds/PopulateContents()
+	var/static/list/items_inside = list(
+		/obj/item/reagent_containers/cup/beaker/meta/omnizine = 1,
+		/obj/item/reagent_containers/cup/beaker/meta/sal_acid = 1,
+		/obj/item/reagent_containers/cup/beaker/meta/oxandrolone = 1,
+		/obj/item/reagent_containers/cup/beaker/meta/pen_acid = 1,
+		/obj/item/reagent_containers/cup/beaker/meta/atropine = 1,
+		/obj/item/reagent_containers/cup/beaker/meta/salbutamol = 1,
+		/obj/item/reagent_containers/cup/beaker/meta/rezadone = 1,
+	)
+	generate_items_inside(items_inside, src)
+
+/obj/item/storage/box/bandages
+	name = "box of bandages"
+	desc = "A box of DeForest brand gel bandages designed to treat blunt-force trauma."
+	icon_state = "brutebox"
+	base_icon_state = "brutebox"
+	inhand_icon_state = "brutebox"
+	lefthand_file = 'icons/mob/inhands/equipment/medical_lefthand.dmi'
+	righthand_file = 'icons/mob/inhands/equipment/medical_righthand.dmi'
+	drop_sound = 'sound/items/handling/matchbox_drop.ogg'
+	pickup_sound = 'sound/items/handling/matchbox_pickup.ogg'
+	illustration = null
+	w_class = WEIGHT_CLASS_SMALL
+	custom_price = PAYCHECK_CREW * 1.75
+
+/obj/item/storage/box/bandages/Initialize(mapload)
+	. = ..()
+	atom_storage.max_slots = 6
+	atom_storage.set_holdable(list(
+		/obj/item/stack/medical/bandage,
+		/obj/item/reagent_containers/pill,
+		/obj/item/reagent_containers/pill/patch,
+	))
+
+/obj/item/storage/box/bandages/PopulateContents()
+	for(var/i in 1 to 5)
+		new /obj/item/stack/medical/bandage(src)
+
+/obj/item/storage/box/bandages/update_icon_state()
+	. = ..()
+	switch(length(contents))
+		if(5)
+			icon_state = "[base_icon_state]_f"
+		if(3 to 4)
+			icon_state = "[base_icon_state]_almostfull"
+		if(1 to 2)
+			icon_state = "[base_icon_state]_almostempty"
+		if(0)
+			icon_state = base_icon_state

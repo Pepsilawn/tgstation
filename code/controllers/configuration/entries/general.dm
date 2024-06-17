@@ -76,6 +76,9 @@
 /// log prayers
 /datum/config_entry/flag/log_prayer
 
+///Log Music Requests
+/datum/config_entry/flag/log_internet_request
+
 /// log silicons
 /datum/config_entry/flag/log_silicon
 
@@ -102,6 +105,9 @@
 
 /// log voting
 /datum/config_entry/flag/log_vote
+
+/// log manual zone switching
+/datum/config_entry/flag/log_zone_switch
 
 /// log client whisper
 /datum/config_entry/flag/log_whisper
@@ -152,6 +158,10 @@
 /// logs all timers in buckets on automatic bucket reset (Useful for timer debugging)
 /datum/config_entry/flag/log_timers_on_bucket_reset
 
+/// Log human readable versions of json log entries
+/datum/config_entry/flag/log_as_human_readable
+	default = TRUE
+
 /// allows admins with relevant permissions to have their own ooc colour
 /datum/config_entry/flag/allow_admin_ooccolor
 
@@ -174,13 +184,13 @@
 
 /// minimum time between voting sessions (deciseconds, 10 minute default)
 /datum/config_entry/number/vote_delay
-	default = 6000
+	default = 10 MINUTES
 	integer = FALSE
 	min_val = 0
 
 /// length of voting period (deciseconds, default 1 minute)
 /datum/config_entry/number/vote_period
-	default = 600
+	default = 1 MINUTES
 	integer = FALSE
 	min_val = 0
 
@@ -248,7 +258,25 @@
 
 /datum/config_entry/string/hostedby
 
-/datum/config_entry/flag/norespawn
+/// Determines if a player can respawn after dying.
+/// 0 / RESPAWN_FLAG_DISABLED = Cannot respawn (default)
+/// 1 / RESPAWN_FLAG_FREE = Can respawn
+/// 2 / RESPAWN_FLAG_NEW_CHARACTER = Can respawn if choosing a different character
+/datum/config_entry/flag/allow_respawn
+	default = RESPAWN_FLAG_DISABLED
+
+/datum/config_entry/flag/allow_respawn/ValidateAndSet(str_val)
+	if(!VASProcCallGuard(str_val))
+		return FALSE
+	var/val_as_num = text2num(str_val)
+	if(val_as_num in list(RESPAWN_FLAG_DISABLED, RESPAWN_FLAG_FREE, RESPAWN_FLAG_NEW_CHARACTER))
+		config_entry_value = val_as_num
+		return TRUE
+	return FALSE
+
+/// Determines how long (in deciseconds) before a player is allowed to respawn.
+/datum/config_entry/number/respawn_delay
+	default = 0 SECONDS
 
 /datum/config_entry/flag/usewhitelist
 
@@ -351,7 +379,14 @@
 /datum/config_entry/string/invoke_youtubedl
 	protection = CONFIG_ENTRY_LOCKED | CONFIG_ENTRY_HIDDEN
 
+/datum/config_entry/flag/request_internet_sound
+
+/datum/config_entry/string/request_internet_allowed
+	protection = CONFIG_ENTRY_LOCKED
+
 /datum/config_entry/flag/show_irc_name
+
+/datum/config_entry/flag/no_default_techweb_link
 
 /datum/config_entry/flag/see_own_notes //Can players see their own admin notes
 
@@ -412,12 +447,13 @@
 
 /datum/config_entry/flag/irc_first_connection_alert // do we notify the irc channel when somebody is connecting for the first time?
 
-/datum/config_entry/flag/check_randomizer
+/datum/config_entry/string/ipintel_base
+	default = "check.getipintel.net"
 
 /datum/config_entry/string/ipintel_email
 
 /datum/config_entry/string/ipintel_email/ValidateAndSet(str_val)
-	return str_val != "ch@nge.me" && ..()
+	return str_val != "ch@nge.me" && (!length(str_val) || findtext(str_val, "@")) && ..()
 
 /datum/config_entry/number/ipintel_rating_bad
 	default = 1
@@ -425,18 +461,26 @@
 	min_val = 0
 	max_val = 1
 
-/datum/config_entry/number/ipintel_save_good
-	default = 12
-	integer = FALSE
+/datum/config_entry/flag/ipintel_reject_rate_limited
+	default = FALSE
+
+/datum/config_entry/flag/ipintel_reject_bad
+	default = FALSE
+
+/datum/config_entry/flag/ipintel_reject_unknown
+	default = FALSE
+
+/datum/config_entry/number/ipintel_rate_minute
+	default = 15
 	min_val = 0
 
-/datum/config_entry/number/ipintel_save_bad
-	default = 1
-	integer = FALSE
+/datum/config_entry/number/ipintel_cache_length
+	default = 7
 	min_val = 0
 
-/datum/config_entry/string/ipintel_domain
-	default = "check.getipintel.net"
+/datum/config_entry/number/ipintel_exempt_playtime_living
+	default = 5
+	min_val = 0
 
 /datum/config_entry/flag/aggressive_changelog
 
@@ -459,9 +503,22 @@
 
 /datum/config_entry/flag/preference_map_voting
 
+/// Allows players to export their own preferences as a JSON file. Left as a config toggle in case it needs to be turned off due to server-specific needs.
+/datum/config_entry/flag/forbid_preferences_export
+	default = FALSE
+
+/// The number of seconds a player must wait between preference export attempts.
+/datum/config_entry/number/seconds_cooldown_for_preferences_export
+	default = 10
+	min_val = 1
+
 /datum/config_entry/number/client_warn_version
 	default = null
 	min_val = 500
+
+/datum/config_entry/number/client_warn_build
+	default = null
+	min_val = 0
 
 /datum/config_entry/string/client_warn_message
 	default = "Your version of byond may have issues or be blocked from accessing this server in the future."
@@ -512,16 +569,29 @@
 	integer = FALSE
 
 /datum/config_entry/flag/irc_announce_new_game
-	deprecated_by = /datum/config_entry/string/chat_announce_new_game
+	deprecated_by = /datum/config_entry/string/channel_announce_new_game
 
 /datum/config_entry/flag/irc_announce_new_game/DeprecationUpdate(value)
 	return "" //default broadcast
 
 /datum/config_entry/string/chat_announce_new_game
+	deprecated_by = /datum/config_entry/string/channel_announce_new_game
+
+/datum/config_entry/string/chat_announce_new_game/DeprecationUpdate(value)
+	return "" //default broadcast
+
+/datum/config_entry/string/channel_announce_new_game
+	default = null
+
+/datum/config_entry/string/channel_announce_end_game
 	default = null
 
 /datum/config_entry/string/chat_new_game_notifications
 	default = null
+
+/// validate ownership of admin flags for chat commands
+/datum/config_entry/flag/secure_chat_commands
+	default = FALSE
 
 /datum/config_entry/flag/debug_admin_hrefs
 
@@ -580,6 +650,15 @@
 
 /datum/config_entry/flag/auto_profile
 
+/datum/config_entry/number/profiler_interval
+	default = 300 SECONDS
+
+/datum/config_entry/number/drift_dump_threshold
+	default = 4 SECONDS
+
+/datum/config_entry/number/drift_profile_delay
+	default = 15 SECONDS
+
 /datum/config_entry/string/centcom_ban_db // URL for the CentCom Galactic Ban DB API
 
 /datum/config_entry/string/centcom_source_whitelist
@@ -623,6 +702,9 @@
 /datum/config_entry/flag/cache_assets
 	default = TRUE
 
+/datum/config_entry/flag/save_spritesheets
+	default = FALSE
+
 /datum/config_entry/flag/station_name_in_hub_entry
 	default = FALSE
 
@@ -643,3 +725,16 @@
 	default = 50
 
 /datum/config_entry/string/morgue_cadaver_override_species
+
+/datum/config_entry/flag/toast_notification_on_init
+
+/datum/config_entry/flag/config_errors_runtime
+	default = FALSE
+
+/datum/config_entry/number/upload_limit
+	default = 524288
+	min_val = 0
+
+/datum/config_entry/number/upload_limit_admin
+	default = 5242880
+	min_val = 0

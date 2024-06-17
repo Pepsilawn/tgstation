@@ -2,7 +2,7 @@
 /datum/unit_test/human_through_recycler
 
 /datum/unit_test/human_through_recycler/Run()
-	var/mob/living/carbon/human/assistant = allocate(/mob/living/carbon/human, run_loc_floor_bottom_left) // we should be in the bottom_left by default, but let's be sooper dooper sure :)
+	var/mob/living/carbon/human/assistant = allocate(/mob/living/carbon/human/consistent, run_loc_floor_bottom_left) // we should be in the bottom_left by default, but let's be sooper dooper sure :)
 	var/obj/machinery/recycler/chewer = allocate(/obj/machinery/recycler/deathtrap, get_step(run_loc_floor_bottom_left, EAST)) //already existing subtype that has emagged set to TRUE, so it shall CHEW. Put it directly right to the assistant to mimick a player entering the recycler.
 	assistant.equipOutfit(/datum/outfit/job/assistant/consistent) // consistent assistant juuuust in case
 	var/turf/open/stage = get_turf(chewer)
@@ -17,8 +17,13 @@
 	TEST_ASSERT_EQUAL(damage_incurred, chewer.crush_damage, "Assistant did not take the expected amount of brute damage ([chewer.crush_damage]) from the emagged recycler! Took ([damage_incurred]) instead.")
 	TEST_ASSERT(chewer.bloody, "The emagged recycler did not become bloody after crushing the assistant!")
 
+	var/list/bad_contents = assistant.contents
+	for(var/obj/item/item in assistant.contents)
+		if(item.item_flags & ABSTRACT)
+			bad_contents -= item
+
 	// Now, let's test to see if all of their clothing got properly deleted.
-	TEST_ASSERT_EQUAL(length(assistant.contents), 0, "Assistant still has items in its contents after being put through an emagged recycler!")
+	TEST_ASSERT_EQUAL(length(bad_contents), 0, "Assistant still has items in its contents after being put through an emagged recycler!")
 	// Consistent Assistants will always have the following: ID, PDA, backpack, a uniform, a headset, and a pair of shoes. If any of these are still present, then the recycler did not properly delete the assistant's clothing.
 	// However, let's check for EVERYTHING just in case, because we don't want to miss anything.
 	// This is just what we expect to be deleted.

@@ -1,8 +1,11 @@
 // Symptoms are the effects that engineered advanced diseases do.
 
 /datum/symptom
-	var/name = ""
-	var/desc = "If you see this something went very wrong." //Basic symptom description
+	var/name = "8-bitten bugs"
+	///Basic symptom description
+	var/desc = "If you see this something went very wrong."
+	///Potential illness name caused by the symptom
+	var/illness = "Unidentified"
 	///Descriptions of threshold effects
 	var/threshold_descs = list()
 	///How the symptom affects the disease's stealth stat, positive values make it less noticeable
@@ -34,6 +37,10 @@
 	var/list/thresholds
 	///If this symptom can appear from /datum/disease/advance/GenerateSymptoms()
 	var/naturally_occuring = TRUE
+	///If the symptom requires an organ for the effects to function, robotic organs are immune to disease unless inorganic biology symptom is present
+	var/required_organ
+	/// How much space does this symptom use?
+	var/weight = 1
 
 /datum/symptom/New()
 	var/list/S = SSdisease.list_symptoms
@@ -55,9 +62,13 @@
 		return FALSE
 	return TRUE
 
-/datum/symptom/proc/Activate(datum/disease/advance/A)
+/datum/symptom/proc/Activate(datum/disease/advance/advanced_disease)
 	if(neutered)
 		return FALSE
+	if(required_organ)
+		if(!advanced_disease.has_required_infectious_organ(advanced_disease.affected_mob, required_organ))
+			return FALSE
+
 	if(world.time < next_activation)
 		return FALSE
 	else
@@ -97,6 +108,7 @@
 	var/list/data = list()
 	data["name"] = name
 	data["desc"] = desc
+	data["weight"] = weight
 	data["stealth"] = stealth
 	data["resistance"] = resistance
 	data["stage_speed"] = stage_speed
@@ -105,3 +117,7 @@
 	data["neutered"] = neutered
 	data["threshold_desc"] = threshold_descs
 	return data
+
+/// Check if we can generate randomly
+/datum/symptom/proc/can_generate_randomly()
+	return naturally_occuring

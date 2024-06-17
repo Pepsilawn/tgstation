@@ -12,15 +12,26 @@
 	var/internal_type = /obj/item/tank/internals/emergency_oxygen
 	/// What medipen should be present in this box?
 	var/medipen_type = /obj/item/reagent_containers/hypospray/medipen
+	/// Are we crafted?
+	var/crafted = FALSE
+
+/obj/item/storage/box/survival/Initialize(mapload)
+	. = ..()
+	if(crafted || !HAS_TRAIT(SSstation, STATION_TRAIT_PREMIUM_INTERNALS))
+		return
+	atom_storage.max_slots += 2
+	atom_storage.max_total_storage += 4
+	name = "large [name]"
+	transform = transform.Scale(1.25, 1)
 
 /obj/item/storage/box/survival/PopulateContents()
+	if(crafted)
+		return
 	if(!isnull(mask_type))
 		new mask_type(src)
 
-	if(!isplasmaman(loc))
+	if(!isnull(internal_type))
 		new internal_type(src)
-	else
-		new /obj/item/tank/internals/plasmaman/belt(src)
 
 	if(!isnull(medipen_type))
 		new medipen_type(src)
@@ -28,6 +39,12 @@
 	if(HAS_TRAIT(SSstation, STATION_TRAIT_PREMIUM_INTERNALS))
 		new /obj/item/flashlight/flare(src)
 		new /obj/item/radio/off(src)
+
+	if(HAS_TRAIT(SSstation, STATION_TRAIT_RADIOACTIVE_NEBULA))
+		new /obj/item/storage/pill_bottle/potassiodide(src)
+
+	if(SSmapping.is_planetary() && LAZYLEN(SSmapping.multiz_levels))
+		new /obj/item/climbing_hook/emergency(src)
 
 /obj/item/storage/box/survival/radio/PopulateContents()
 	..() // we want the survival stuff too.
@@ -49,6 +66,7 @@
 /obj/item/storage/box/survival/mining/PopulateContents()
 	..()
 	new /obj/item/crowbar/red(src)
+	new /obj/item/healthanalyzer/simple/miner(src)
 
 // Engineer survival box
 /obj/item/storage/box/survival/engineer
@@ -64,18 +82,19 @@
 // Syndie survival box
 /obj/item/storage/box/survival/syndie
 	name = "operation-ready survival box"
-	desc = "A box with the essentials of your operation. This one is labelled to contain an extended-capacity tank."
+	desc = "A box with the essentials of your operation. This one is labelled to contain an extended-capacity tank and a handy guide on survival."
 	icon_state = "syndiebox"
 	illustration = "extendedtank"
 	mask_type = /obj/item/clothing/mask/gas/syndicate
 	internal_type = /obj/item/tank/internals/emergency_oxygen/engi
-	medipen_type = null
+	medipen_type =  /obj/item/reagent_containers/hypospray/medipen/atropine
 
 /obj/item/storage/box/survival/syndie/PopulateContents()
 	..()
 	new /obj/item/crowbar/red(src)
 	new /obj/item/screwdriver/red(src)
 	new /obj/item/weldingtool/mini(src)
+	new /obj/item/paper/fluff/operative(src)
 
 /obj/item/storage/box/survival/centcom
 	name = "emergency response survival box"
@@ -99,19 +118,25 @@
 /obj/item/storage/box/survival/medical
 	mask_type = /obj/item/clothing/mask/breath/medical
 
+/obj/item/storage/box/survival/crafted
+	crafted = TRUE
+
+/obj/item/storage/box/survival/engineer/crafted
+	crafted = TRUE
+
 //Mime spell boxes
 
 /obj/item/storage/box/mime
 	name = "invisible box"
 	desc = "Unfortunately not large enough to trap the mime."
-	foldable = null
+	foldable_result = null
 	icon_state = "box"
 	inhand_icon_state = null
 	alpha = 0
 
 /obj/item/storage/box/mime/attack_hand(mob/user, list/modifiers)
 	..()
-	if(user.mind.miming)
+	if(HAS_MIND_TRAIT(user, TRAIT_MIMING))
 		alpha = 255
 
 /obj/item/storage/box/mime/Moved(atom/old_loc, movement_dir, forced, list/old_locs, momentum_change = TRUE)
@@ -124,7 +149,7 @@
 	desc = "A special box for sensitive people."
 	icon_state = "hugbox"
 	illustration = "heart"
-	foldable = null
+	foldable_result = null
 
 /obj/item/storage/box/hug/suicide_act(mob/living/user)
 	user.visible_message(span_suicide("[user] clamps the box of hugs on [user.p_their()] jugular! Guess it wasn't such a hugbox after all.."))
@@ -146,20 +171,20 @@
 	desc = "A colorful cardboard box for the clown"
 	illustration = "clown"
 
-/obj/item/storage/box/clown/attackby(obj/item/I, mob/user, params)
-	if((istype(I, /obj/item/bodypart/arm/left/robot)) || (istype(I, /obj/item/bodypart/arm/right/robot)))
+/obj/item/storage/box/clown/storage_insert_on_interacted_with(datum/storage, obj/item/inserted, mob/living/user)
+	if(istype(inserted, /obj/item/bodypart/arm/left/robot) || istype(inserted, /obj/item/bodypart/arm/right/robot))
 		if(contents.len) //prevent accidently deleting contents
 			balloon_alert(user, "items inside!")
-			return
-		if(!user.temporarilyRemoveItemFromInventory(I))
-			return
-		qdel(I)
-		balloon_alert(user, "wheels added, honk!")
+			return FALSE
+		if(!user.temporarilyRemoveItemFromInventory(inserted))
+			return FALSE
+		qdel(inserted)
+		loc.balloon_alert(user, "wheels added, honk!")
 		var/obj/item/bot_assembly/honkbot/A = new
 		qdel(src)
 		user.put_in_hands(A)
-	else
-		return ..()
+		return FALSE
+	return TRUE
 
 /obj/item/storage/box/clown/suicide_act(mob/living/user)
 	user.visible_message(span_suicide("[user] opens [src] and gets consumed by [p_them()]! It looks like [user.p_theyre()] trying to commit suicide!"))
@@ -181,13 +206,25 @@
 	desc = "A special box for sensitive people."
 	icon_state = "hugbox"
 	illustration = "heart"
-	foldable = null
+	foldable_result = null
 	mask_type = null
+	var/random_funny_internals = TRUE
+
+/obj/item/storage/box/survival/hug/PopulateContents()
+	if(!random_funny_internals)
+		return ..()
+	internal_type = pick(
+			/obj/item/tank/internals/emergency_oxygen/engi/clown/n2o,
+			/obj/item/tank/internals/emergency_oxygen/engi/clown/bz,
+			/obj/item/tank/internals/emergency_oxygen/engi/clown/helium,
+			)
+	return ..()
 
 //Mime survival box
 /obj/item/storage/box/survival/hug/black
 	icon_state = "hugbox_black"
 	illustration = "heart_black"
+	random_funny_internals = FALSE
 
 //Duplicated suicide/attack self procs, since the survival boxes are a subtype of box/survival
 /obj/item/storage/box/survival/hug/suicide_act(mob/living/user)
@@ -209,6 +246,31 @@
 	for(var/i in 1 to 7)
 		var/plush_path = /obj/effect/spawner/random/entertainment/plushie
 		new plush_path(src)
+
+/obj/item/storage/box/survival/mining/bonus
+	mask_type = null
+	internal_type = /obj/item/tank/internals/emergency_oxygen/double
+
+/obj/item/storage/box/survival/mining/bonus/PopulateContents()
+	..()
+	new /obj/item/gps/mining(src)
+	new /obj/item/t_scanner/adv_mining_scanner(src)
+
+/obj/item/storage/box/miner_modkits
+	name = "miner modkit/trophy box"
+	desc = "Contains every modkit and trophy in the game."
+
+/obj/item/storage/box/miner_modkits/Initialize(mapload)
+	. = ..()
+	atom_storage.set_holdable(list(/obj/item/borg/upgrade/modkit, /obj/item/crusher_trophy))
+	atom_storage.numerical_stacking = TRUE
+
+/obj/item/storage/box/miner_modkits/PopulateContents()
+	for(var/trophy in subtypesof(/obj/item/crusher_trophy))
+		new trophy(src)
+	for(var/modkit in subtypesof(/obj/item/borg/upgrade/modkit))
+		for(var/i in 1 to 10) //minimum cost ucrrently is 20, and 2 pkas, so lets go with that
+			new modkit(src)
 
 /obj/item/storage/box/skillchips
 	name = "box of skillchips"

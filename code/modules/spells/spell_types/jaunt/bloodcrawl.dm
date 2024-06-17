@@ -7,7 +7,9 @@
 	name = "Blood Crawl"
 	desc = "Allows you to phase in and out of existance via pools of blood."
 	background_icon_state = "bg_demon"
-	icon_icon = 'icons/mob/actions/actions_minor_antag.dmi'
+	overlay_icon_state = "bg_demon_border"
+
+	button_icon = 'icons/mob/actions/actions_minor_antag.dmi'
 	button_icon_state = "bloodcrawl"
 
 	spell_requirements = NONE
@@ -23,7 +25,7 @@
 
 /datum/action/cooldown/spell/jaunt/bloodcrawl/Grant(mob/grant_to)
 	. = ..()
-	RegisterSignal(grant_to, COMSIG_MOVABLE_MOVED, PROC_REF(update_icon_on_signal))
+	RegisterSignal(grant_to, COMSIG_MOVABLE_MOVED, PROC_REF(update_status_on_signal))
 
 /datum/action/cooldown/spell/jaunt/bloodcrawl/Remove(mob/remove_from)
 	. = ..()
@@ -81,13 +83,13 @@
 	var/turf/jaunt_turf = get_turf(blood)
 
 	// Begin the jaunt
-	jaunter.notransform = TRUE
+	ADD_TRAIT(jaunter, TRAIT_NO_TRANSFORM, REF(src))
 	var/obj/effect/dummy/phased_mob/holder = enter_jaunt(jaunter, jaunt_turf)
 	if(!holder)
-		jaunter.notransform = FALSE
+		REMOVE_TRAIT(jaunter, TRAIT_NO_TRANSFORM, REF(src))
 		return FALSE
 
-	RegisterSignal(holder, COMSIG_MOVABLE_MOVED, PROC_REF(update_icon_on_signal))
+	RegisterSignal(holder, COMSIG_MOVABLE_MOVED, PROC_REF(update_status_on_signal))
 	if(equip_blood_hands && iscarbon(jaunter))
 		jaunter.drop_all_held_items()
 		// Give them some bloody hands to prevent them from doing things
@@ -102,7 +104,7 @@
 	playsound(jaunt_turf, 'sound/magic/enter_blood.ogg', 50, TRUE, -1)
 	jaunter.extinguish_mob()
 
-	jaunter.notransform = FALSE
+	REMOVE_TRAIT(jaunter, TRAIT_NO_TRANSFORM, REF(src))
 	return TRUE
 
 /**
@@ -111,7 +113,7 @@
  */
 /datum/action/cooldown/spell/jaunt/bloodcrawl/proc/try_exit_jaunt(obj/effect/decal/cleanable/blood, mob/living/jaunter, forced = FALSE)
 	if(!forced)
-		if(jaunter.notransform)
+		if(HAS_TRAIT(jaunter, TRAIT_NO_TRANSFORM))
 			to_chat(jaunter, span_warning("You cannot exit yet!!"))
 			return FALSE
 
@@ -160,6 +162,8 @@
 		they will be consumed by you, fully healing you."
 	/// The sound played when someone's consumed.
 	var/consume_sound = 'sound/magic/demon_consume.ogg'
+	/// consume count (statistics and stuff)
+	var/consume_count = 0
 
 /datum/action/cooldown/spell/jaunt/bloodcrawl/slaughter_demon/try_enter_jaunt(obj/effect/decal/cleanable/blood, mob/living/jaunter)
 	// Save this before the actual jaunt
@@ -194,9 +198,9 @@
 		blind_message = span_notice("You hear a splash."),
 	)
 
-	jaunter.notransform = TRUE
+	ADD_TRAIT(jaunter, TRAIT_NO_TRANSFORM, REF(src))
 	consume_victim(victim, jaunter)
-	jaunter.notransform = FALSE
+	REMOVE_TRAIT(jaunter, TRAIT_NO_TRANSFORM, REF(src))
 
 	return TRUE
 
@@ -218,7 +222,7 @@
 	if(SEND_SIGNAL(victim, COMSIG_LIVING_BLOOD_CRAWL_CONSUMED, src, jaunter) & COMPONENT_STOP_CONSUMPTION)
 		return FALSE
 
-	jaunter.revive(full_heal = TRUE, admin_revive = FALSE)
+	jaunter.revive(HEAL_ALL)
 
 	// No defib possible after laughter
 	victim.apply_damage(1000, BRUTE, wound_bonus = CANT_WOUND)
@@ -226,6 +230,7 @@
 		victim.investigate_log("has been killed by being consumed by a slaugter demon.", INVESTIGATE_DEATHS)
 	victim.death()
 	on_victim_consumed(victim, jaunter)
+	consume_count++
 
 /**
  * Called when a victim starts to be consumed.
@@ -273,10 +278,10 @@
 	to_chat(jaunter, span_clown("[victim] joins your party! Your health is fully restored."))
 	consumed_mobs += victim
 	RegisterSignal(victim, COMSIG_MOB_STATCHANGE, PROC_REF(on_victim_statchange))
-	RegisterSignal(victim, COMSIG_PARENT_QDELETING, PROC_REF(on_victim_deleted))
+	RegisterSignal(victim, COMSIG_QDELETING, PROC_REF(on_victim_deleted))
 
 /**
- * Signal proc for COMSIG_LIVING_DEATH and COMSIG_PARENT_QDELETING
+ * Signal proc for COMSIG_LIVING_DEATH and COMSIG_QDELETING
  *
  * If our demon is deleted or destroyed, expel all of our consumed mobs
  */
@@ -287,12 +292,12 @@
 	for(var/mob/living/friend as anything in consumed_mobs)
 
 		// Unregister the signals first
-		UnregisterSignal(friend, list(COMSIG_MOB_STATCHANGE, COMSIG_PARENT_QDELETING))
+		UnregisterSignal(friend, list(COMSIG_MOB_STATCHANGE, COMSIG_QDELETING))
 
 		friend.forceMove(release_turf)
-		if(!friend.revive(full_heal = TRUE, admin_revive = TRUE))
+		// Heals them back to state one
+		if(!friend.revive(ADMIN_HEAL_ALL, force_grab_ghost = TRUE))
 			continue
-		friend.grab_ghost(force = TRUE)
 		playsound(release_turf, consumed_mobs, 50, TRUE, -1)
 		to_chat(friend, span_clown("You leave [source]'s warm embrace, and feel ready to take on the world."))
 

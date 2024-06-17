@@ -1,14 +1,12 @@
 /datum/computer_file/program/ai_restorer
 	filename = "ai_restore"
 	filedesc = "AI Manager & Restorer"
-	category = PROGRAM_CATEGORY_SCI
-	program_icon_state = "generic"
+	downloader_category = PROGRAM_CATEGORY_SCIENCE
+	program_open_overlay = "generic"
 	extended_desc = "Firmware Restoration Kit, capable of reconstructing damaged AI systems. Requires direct AI connection via intellicard slot."
 	size = 12
-	requires_ntnet = FALSE
-	usage_flags = PROGRAM_CONSOLE | PROGRAM_LAPTOP
-	transfer_access = list(ACCESS_RD)
-	available_on_ntnet = TRUE
+	can_run_on_flags = PROGRAM_CONSOLE | PROGRAM_LAPTOP
+	download_access = list(ACCESS_RD)
 	tgui_id = "NtosAiRestorer"
 	program_icon = "laptop-code"
 
@@ -30,11 +28,11 @@
 	examine_text += span_info("Alt-click to eject the intelliCard.")
 	return examine_text
 
-/datum/computer_file/program/ai_restorer/kill_program(forced)
+/datum/computer_file/program/ai_restorer/kill_program(mob/user)
 	try_eject(forced = TRUE)
 	return ..()
 
-/datum/computer_file/program/ai_restorer/process_tick(delta_time)
+/datum/computer_file/program/ai_restorer/process_tick(seconds_per_tick)
 	. = ..()
 	if(!restoring) //Put the check here so we don't check for an ai all the time
 		return
@@ -50,15 +48,16 @@
 	// Please don't forget to update health, otherwise the below if statements will probably always fail.
 	A.updatehealth()
 	if(A.health >= 0 && A.stat == DEAD)
-		A.revive(full_heal = FALSE, admin_revive = FALSE)
+		A.revive()
 		stored_card.update_appearance()
+
 	// Finished restoring
 	if(A.health >= 100)
 		restoring = FALSE
 
 	return TRUE
 
-/datum/computer_file/program/ai_restorer/try_insert(obj/item/attacking_item, mob/living/user)
+/datum/computer_file/program/ai_restorer/application_attackby(obj/item/attacking_item, mob/living/user)
 	if(!computer)
 		return FALSE
 	if(!istype(attacking_item, /obj/item/aicard))
@@ -97,11 +96,8 @@
 	return TRUE
 
 
-/datum/computer_file/program/ai_restorer/ui_act(action, params)
+/datum/computer_file/program/ai_restorer/ui_act(action, params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
-	if(.)
-		return
-
 	switch(action)
 		if("PRG_beginReconstruction")
 			if(!stored_card || !stored_card.AI)
@@ -109,7 +105,7 @@
 			var/mob/living/silicon/ai/A = stored_card.AI
 			if(A && A.health < 100)
 				restoring = TRUE
-				A.notify_ghost_cloning("Your core files are being restored!", source = computer)
+				A.notify_revival("Your core files are being restored!", source = computer)
 			return TRUE
 		if("PRG_eject")
 			if(stored_card)
@@ -117,7 +113,7 @@
 				return TRUE
 
 /datum/computer_file/program/ai_restorer/ui_data(mob/user)
-	var/list/data = get_header_data()
+	var/list/data = list()
 
 	data["ejectable"] = TRUE
 	data["AI_present"] = !!stored_card?.AI

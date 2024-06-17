@@ -13,20 +13,20 @@
  * Imperfect Ritual
  * > Sidepaths:
  *   Void Cloak
- *   Ashen Eyes
  *
  * Mark of Flesh
  * Ritual of Knowledge
+ * Flesh Surgery
  * Raw Ritual
  * > Sidepaths:
  *   Blood Siphon
- *   Curse of Paralysis
+ *   Opening Blast
  *
  * Bleeding Steel
  * Lonely Ritual
  * > Sidepaths:
- *   Ashen Ritual
  *   Cleave
+ *   Aptera Vulnera
  *
  * Priest's Final Hymn
  */
@@ -45,11 +45,8 @@
 	limit = 3 // Bumped up so they can arm up their ghouls too.
 	route = PATH_FLESH
 
-/datum/heretic_knowledge/limited_amount/starting/base_flesh/on_research(mob/user)
+/datum/heretic_knowledge/limited_amount/starting/base_flesh/on_research(mob/user, datum/antagonist/heretic/our_heretic)
 	. = ..()
-	var/datum/antagonist/heretic/our_heretic = IS_HERETIC(user)
-	our_heretic.heretic_path = route
-
 	var/datum/objective/heretic_summon/summon_objective = new()
 	summon_objective.owner = our_heretic.owner
 	our_heretic.objectives += summon_objective
@@ -68,10 +65,10 @@
 	cost = 1
 	route = PATH_FLESH
 
-/datum/heretic_knowledge/limited_amount/flesh_grasp/on_gain(mob/user)
+/datum/heretic_knowledge/limited_amount/flesh_grasp/on_gain(mob/user, datum/antagonist/heretic/our_heretic)
 	RegisterSignal(user, COMSIG_HERETIC_MANSUS_GRASP_ATTACK, PROC_REF(on_mansus_grasp))
 
-/datum/heretic_knowledge/limited_amount/flesh_grasp/on_lose(mob/user)
+/datum/heretic_knowledge/limited_amount/flesh_grasp/on_lose(mob/user, datum/antagonist/heretic/our_heretic)
 	UnregisterSignal(user, COMSIG_HERETIC_MANSUS_GRASP_ATTACK)
 
 /datum/heretic_knowledge/limited_amount/flesh_grasp/proc/on_mansus_grasp(mob/living/source, mob/living/target)
@@ -125,14 +122,13 @@
 /datum/heretic_knowledge/limited_amount/flesh_ghoul
 	name = "Imperfect Ritual"
 	desc = "Allows you to transmute a corpse and a poppy to create a Voiceless Dead. \
+		The corpse does not need to have a soul. \
 		Voiceless Dead are mute ghouls and only have 50 health, but can use Bloody Blades effectively. \
 		You can only create two at a time."
 	gain_text = "I found notes of a dark ritual, unfinished... yet still, I pushed forward."
 	next_knowledge = list(
 		/datum/heretic_knowledge/mark/flesh_mark,
-		/datum/heretic_knowledge/codex_cicatrix,
 		/datum/heretic_knowledge/void_cloak,
-		/datum/heretic_knowledge/medallion,
 	)
 	required_atoms = list(
 		/mob/living/carbon/human = 1,
@@ -172,15 +168,13 @@
 
 	if(!soon_to_be_ghoul.mind || !soon_to_be_ghoul.client)
 		message_admins("[ADMIN_LOOKUPFLW(user)] is creating a voiceless dead of a body with no player.")
-		var/list/mob/dead/observer/candidates = poll_candidates_for_mob("Do you want to play as a [soon_to_be_ghoul.real_name], a voiceless dead?", ROLE_HERETIC, ROLE_HERETIC, 5 SECONDS, soon_to_be_ghoul)
-		if(!LAZYLEN(candidates))
+		var/mob/chosen_one = SSpolling.poll_ghosts_for_target("Do you want to play as [span_danger(soon_to_be_ghoul.real_name)], a [span_notice("voiceless dead")]?", check_jobban = ROLE_HERETIC, role = ROLE_HERETIC, poll_time = 5 SECONDS, checked_target = soon_to_be_ghoul, alert_pic = mutable_appearance('icons/mob/human/human.dmi', "husk"), jump_target = soon_to_be_ghoul, role_name_text = "voiceless dead")
+		if(isnull(chosen_one))
 			loc.balloon_alert(user, "ritual failed, no ghosts!")
 			return FALSE
-
-		var/mob/dead/observer/chosen_candidate = pick(candidates)
-		message_admins("[key_name_admin(chosen_candidate)] has taken control of ([key_name_admin(soon_to_be_ghoul)]) to replace an AFK player.")
+		message_admins("[key_name_admin(chosen_one)] has taken control of ([key_name_admin(soon_to_be_ghoul)]) to replace an AFK player.")
 		soon_to_be_ghoul.ghostize(FALSE)
-		soon_to_be_ghoul.key = chosen_candidate.key
+		soon_to_be_ghoul.key = chosen_one.key
 
 	selected_atoms -= soon_to_be_ghoul
 	make_ghoul(user, soon_to_be_ghoul)
@@ -219,7 +213,19 @@
 	mark_type = /datum/status_effect/eldritch/flesh
 
 /datum/heretic_knowledge/knowledge_ritual/flesh
+	next_knowledge = list(/datum/heretic_knowledge/spell/flesh_surgery)
+	route = PATH_FLESH
+
+/datum/heretic_knowledge/spell/flesh_surgery
+	name = "Knitting of Flesh"
+	desc = "Grants you the spell Knit Flesh. This spell allows you to remove organs from victims \
+		without requiring a lengthy surgery. This process is much longer if the target is not dead. \
+		This spell also allows you to heal your minions and summons, or restore failing organs to acceptable status."
+	gain_text = "But they were not out of my reach for long. With every step, the screams grew, until at last \
+		I learned that they could be silenced."
 	next_knowledge = list(/datum/heretic_knowledge/summon/raw_prophet)
+	spell_to_add = /datum/action/cooldown/spell/touch/flesh_surgery
+	cost = 1
 	route = PATH_FLESH
 
 /datum/heretic_knowledge/summon/raw_prophet
@@ -233,16 +239,17 @@
 		/datum/heretic_knowledge/blade_upgrade/flesh,
 		/datum/heretic_knowledge/reroll_targets,
 		/datum/heretic_knowledge/spell/blood_siphon,
-		/datum/heretic_knowledge/curse/paralysis,
+		/datum/heretic_knowledge/spell/opening_blast,
 	)
 	required_atoms = list(
 		/obj/item/organ/internal/eyes = 1,
 		/obj/effect/decal/cleanable/blood = 1,
 		/obj/item/bodypart/arm/left = 1,
 	)
-	mob_to_summon = /mob/living/simple_animal/hostile/heretic_summon/raw_prophet
+	mob_to_summon = /mob/living/basic/heretic_summon/raw_prophet
 	cost = 1
 	route = PATH_FLESH
+	poll_ignore_define = POLL_IGNORE_RAW_PROPHET
 
 /datum/heretic_knowledge/blade_upgrade/flesh
 	name = "Bleeding Steel"
@@ -251,6 +258,8 @@
 		I finally began to understand. And then, blood rained from the heavens."
 	next_knowledge = list(/datum/heretic_knowledge/summon/stalker)
 	route = PATH_FLESH
+	///What type of wound do we apply on hit
+	var/wound_type = /datum/wound/slash/flesh/severe
 
 /datum/heretic_knowledge/blade_upgrade/flesh/do_melee_effects(mob/living/source, mob/living/target, obj/item/melee/sickly_blade/blade)
 	if(!iscarbon(target) || source == target)
@@ -258,7 +267,7 @@
 
 	var/mob/living/carbon/carbon_target = target
 	var/obj/item/bodypart/bodypart = pick(carbon_target.bodyparts)
-	var/datum/wound/slash/severe/crit_wound = new()
+	var/datum/wound/crit_wound = new wound_type()
 	crit_wound.apply_wound(bodypart, attack_direction = get_dir(source, target))
 
 /datum/heretic_knowledge/summon/stalker
@@ -269,7 +278,7 @@
 		An ever shapeshifting mass of flesh, it knew well my goals. The Marshal approved."
 	next_knowledge = list(
 		/datum/heretic_knowledge/ultimate/flesh_final,
-		/datum/heretic_knowledge/summon/ashy,
+		/datum/heretic_knowledge/spell/apetra_vulnera,
 		/datum/heretic_knowledge/spell/cleave,
 	)
 	required_atoms = list(
@@ -279,14 +288,15 @@
 		/obj/item/pen = 1,
 		/obj/item/paper = 1,
 	)
-	mob_to_summon = /mob/living/simple_animal/hostile/heretic_summon/stalker
+	mob_to_summon = /mob/living/basic/heretic_summon/stalker
 	cost = 1
 	route = PATH_FLESH
+	poll_ignore_define = POLL_IGNORE_STALKER
 
 /datum/heretic_knowledge/ultimate/flesh_final
 	name = "Priest's Final Hymn"
 	desc = "The ascension ritual of the Path of Flesh. \
-		Bring 4 corpses to a transumation rune to complete the ritual. \
+		Bring 4 corpses to a transmutation rune to complete the ritual. \
 		When completed, you gain the ability to shed your human form \
 		and become the Lord of the Night, a supremely powerful creature. \
 		Just the act of transforming causes nearby heathens great fear and trauma. \
@@ -301,7 +311,12 @@
 
 /datum/heretic_knowledge/ultimate/flesh_final/on_finished_recipe(mob/living/user, list/selected_atoms, turf/loc)
 	. = ..()
-	priority_announce("[generate_heretic_text()] Ever coiling vortex. Reality unfolded. ARMS OUTREACHED, THE LORD OF THE NIGHT, [user.real_name] has ascended! Fear the ever twisting hand! [generate_heretic_text()]", "[generate_heretic_text()]", ANNOUNCER_SPANOMALIES)
+	priority_announce(
+		text = "[generate_heretic_text()] Ever coiling vortex. Reality unfolded. ARMS OUTREACHED, THE LORD OF THE NIGHT, [user.real_name] has ascended! Fear the ever twisting hand! [generate_heretic_text()]",
+		title = "[generate_heretic_text()]",
+		sound = 'sound/ambience/antag/heretic/ascend_flesh.ogg',
+		color_override = "pink",
+	)
 
 	var/datum/action/cooldown/spell/shapeshift/shed_human_form/worm_spell = new(user.mind)
 	worm_spell.Grant(user)

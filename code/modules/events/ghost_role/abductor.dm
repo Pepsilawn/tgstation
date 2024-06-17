@@ -14,11 +14,12 @@
 	fakeable = FALSE //Nothing to fake here
 
 /datum/round_event/ghost_role/abductor/spawn_role()
-	var/list/mob/dead/observer/candidates = get_candidates(ROLE_ABDUCTOR, ROLE_ABDUCTOR)
+	var/list/mob/dead/observer/candidates = SSpolling.poll_ghost_candidates(check_jobban = ROLE_ABDUCTOR, role = ROLE_ABDUCTOR, alert_pic = /obj/item/melee/baton/abductor, role_name_text = role_name, amount_to_pick = 2)
 
-	if(candidates.len < 2)
+	if(length(candidates) < 2)
 		return NOT_ENOUGH_PLAYERS
 
+	SSmapping.lazy_load_template(LAZY_TEMPLATE_KEY_ABDUCTOR_SHIPS)
 	var/mob/living/carbon/human/agent = make_body(pick_n_take(candidates))
 	var/mob/living/carbon/human/scientist = make_body(pick_n_take(candidates))
 

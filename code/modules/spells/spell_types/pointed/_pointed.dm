@@ -10,8 +10,6 @@
 /datum/action/cooldown/spell/pointed
 	click_to_activate = TRUE
 
-	/// The base icon state of the spell's button icon, used for editing the icon "on" and "off"
-	var/base_icon_state
 	/// Message showing to the spell owner upon activating pointed spell.
 	var/active_msg
 	/// Message showing to the spell owner upon deactivating pointed spell.
@@ -53,9 +51,7 @@
 	SHOULD_CALL_PARENT(TRUE)
 
 	to_chat(on_who, span_notice("[active_msg] <B>Left-click to cast the spell on a target!</B>"))
-	if(base_icon_state)
-		button_icon_state = "[base_icon_state]1"
-		UpdateButtons()
+	build_all_button_icons()
 	return TRUE
 
 /// Called when the spell is deactivated / the click ability is unset from our spell
@@ -65,33 +61,36 @@
 	if(refund_cooldown)
 		// Only send the "deactivation" message if they're willingly disabling the ability
 		to_chat(on_who, span_notice("[deactive_msg]"))
-	if(base_icon_state)
-		button_icon_state = "[base_icon_state]0"
-		UpdateButtons()
+	build_all_button_icons()
 	return TRUE
 
-/datum/action/cooldown/spell/pointed/InterceptClickOn(mob/living/caller, params, atom/click_target)
+/datum/action/cooldown/spell/pointed/InterceptClickOn(mob/living/caller, params, atom/target)
 
 	var/atom/aim_assist_target
-	if(aim_assist && isturf(click_target))
+	if(aim_assist && isturf(target))
 		// Find any human in the list. We aren't picky, it's aim assist after all
-		aim_assist_target = locate(/mob/living/carbon/human) in click_target
+		aim_assist_target = locate(/mob/living/carbon/human) in target
 		if(!aim_assist_target)
 			// If we didn't find a human, we settle for any living at all
-			aim_assist_target = locate(/mob/living) in click_target
+			aim_assist_target = locate(/mob/living) in target
 
-	return ..(caller, params, aim_assist_target || click_target)
+	return ..(caller, params, aim_assist_target || target)
 
 /datum/action/cooldown/spell/pointed/is_valid_target(atom/cast_on)
 	if(cast_on == owner)
 		to_chat(owner, span_warning("You cannot cast [src] on yourself!"))
 		return FALSE
 
-	if(get_dist(owner, cast_on) > cast_range)
-		to_chat(owner, span_warning("[cast_on.p_theyre(TRUE)] too far away!"))
-		return FALSE
-
 	return TRUE
+
+/datum/action/cooldown/spell/pointed/before_cast(atom/cast_on)
+	. = ..()
+	if(. & SPELL_CANCEL_CAST)
+		return
+
+	if(owner && get_dist(get_turf(owner), get_turf(cast_on)) > cast_range)
+		cast_on.balloon_alert(owner, "too far away!")
+		return . | SPELL_CANCEL_CAST
 
 /**
  * ### Pointed projectile spells
@@ -134,10 +133,11 @@
 // cast_on is a turf, or atom target, that we clicked on to fire at.
 /datum/action/cooldown/spell/pointed/projectile/cast(atom/cast_on)
 	. = ..()
-	if(!isturf(owner.loc))
+	var/atom/caster = get_caster_from_target(owner)
+	if(!isturf(caster.loc))
 		return FALSE
 
-	var/turf/caster_turf = get_turf(owner)
+	var/turf/caster_turf = caster.loc
 	// Get the tile infront of the caster, based on their direction
 	var/turf/caster_front_turf = get_step(owner, owner.dir)
 

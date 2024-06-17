@@ -5,7 +5,7 @@
 	icon_state = "card_scanner"
 	alpha = 150
 	anchored = TRUE
-	armor = list(MELEE = 0, BULLET = 50, LASER = 50, ENERGY = 50, BOMB = 0, BIO = 0, FIRE = 20, ACID = 20)
+	armor_type = /datum/armor/structure_holopay
 	max_integrity = 15
 	layer = FLY_LAYER
 	/// ID linked to the holopay
@@ -16,6 +16,13 @@
 	var/shop_logo = "donate"
 	/// Replaces the "pay whatever" functionality with a set amount when non-zero.
 	var/force_fee = 0
+
+/datum/armor/structure_holopay
+	bullet = 50
+	laser = 50
+	energy = 50
+	fire = 20
+	acid = 20
 
 /obj/structure/holopay/examine(mob/user)
 	. = ..()
@@ -58,9 +65,8 @@
 		if(BURN)
 			playsound(loc, 'sound/weapons/egloves.ogg', 80, TRUE)
 
-/obj/structure/holopay/deconstruct()
+/obj/structure/holopay/atom_deconstruct(dissambled = TRUE)
 	dissipate()
-	return ..()
 
 /obj/structure/holopay/Destroy()
 	linked_card?.my_store = null
@@ -90,7 +96,7 @@
 		/// Exit sanity checks
 		if(!cash_deposit)
 			return TRUE
-		if(QDELETED(held_item) || QDELETED(user) || QDELETED(src) || !user.canUseTopic(src, be_close = TRUE, no_dexterity = FALSE, no_tk = TRUE))
+		if(QDELETED(held_item) || QDELETED(user) || QDELETED(src) || !user.can_perform_action(src, FORBID_TELEKINESIS_REACH))
 			return FALSE
 		if(!chip.spend(cash_deposit, FALSE))
 			balloon_alert(user, "insufficient credits")
@@ -130,7 +136,7 @@
 		ui = new(user, src, "HoloPay")
 		ui.open()
 
-/obj/structure/holopay/ui_status(mob/user)
+/obj/structure/holopay/ui_status(mob/user, datum/ui_state/state)
 	. = ..()
 	if(!in_range(user, src) && !isobserver(user))
 		return UI_CLOSE
@@ -232,7 +238,7 @@
  * Deletes the holopay thereafter.
  */
 /obj/structure/holopay/proc/dissipate()
-	playsound(loc, "sound/effects/empulse.ogg", 40, TRUE)
+	playsound(loc, 'sound/effects/empulse.ogg', 40, TRUE)
 	visible_message(span_notice("The pay stand vanishes."))
 	qdel(src)
 
@@ -248,7 +254,7 @@
 	/// Account checks
 	var/obj/item/card/id/id_card
 	id_card = user.get_idcard(TRUE)
-	if(!id_card || !id_card.registered_account || !id_card.registered_account.account_job)
+	if(isnull(id_card) || id_card.can_be_used_in_payment(user))
 		balloon_alert(user, "invalid account")
 		to_chat(user, span_warning("You don't have a valid account."))
 		return FALSE
@@ -260,7 +266,7 @@
 	/// If the user has enough money, ask them the amount or charge the force fee
 	var/amount = force_fee || tgui_input_number(user, "How much? (Max: [payee.account_balance])", "Patronage", max_value = payee.account_balance)
 	/// Exit checks in case the user cancelled or entered an invalid amount
-	if(!amount || QDELETED(user) || QDELETED(src) || !user.canUseTopic(src, be_close = TRUE, no_dexterity = FALSE, no_tk = TRUE))
+	if(!amount || QDELETED(user) || QDELETED(src) || !user.can_perform_action(src, FORBID_TELEKINESIS_REACH))
 		return FALSE
 	if(!payee.adjust_money(-amount, "Holopay: [capitalize(name)]"))
 		balloon_alert(user, "insufficient credits")

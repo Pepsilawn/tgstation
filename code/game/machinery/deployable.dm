@@ -17,18 +17,19 @@
 	var/proj_pass_rate = 50 //How many projectiles will pass the cover. Lower means stronger cover
 	var/bar_material = METAL
 
-/obj/structure/barricade/deconstruct(disassembled = TRUE)
-	if(!(flags_1 & NODECONSTRUCT_1))
-		make_debris()
-	qdel(src)
+/obj/structure/barricade/atom_deconstruct(disassembled = TRUE)
+	make_debris()
 
+/// Spawn debris & stuff upon deconstruction
 /obj/structure/barricade/proc/make_debris()
+	PROTECTED_PROC(TRUE)
+
 	return
 
 /obj/structure/barricade/attackby(obj/item/I, mob/living/user, params)
 	if(I.tool_behaviour == TOOL_WELDER && !user.combat_mode && bar_material == METAL)
 		if(atom_integrity < max_integrity)
-			if(!I.tool_start_check(user, amount=0))
+			if(!I.tool_start_check(user, amount=1))
 				return
 
 			to_chat(user, span_notice("You begin repairing [src]..."))
@@ -57,6 +58,7 @@
 	desc = "This space is blocked off by a wooden barricade."
 	icon = 'icons/obj/structures.dmi'
 	icon_state = "woodenbarricade"
+	resistance_flags = FLAMMABLE
 	bar_material = WOOD
 	var/drop_amount = 3
 
@@ -76,10 +78,10 @@
 		else
 			to_chat(user, span_notice("You start adding [I] to [src]..."))
 			playsound(src, 'sound/items/hammering_wood.ogg', 50, vary = TRUE)
-			if(do_after(user, 50, target=src))
+			if(do_after(user, 5 SECONDS, target=src))
 				W.use(5)
 				var/turf/T = get_turf(src)
-				T.PlaceOnTop(/turf/closed/wall/mineral/wood/nonmetal)
+				T.place_on_top(/turf/closed/wall/mineral/wood/nonmetal)
 				qdel(src)
 				return
 	return ..()
@@ -92,12 +94,12 @@
 	tool.play_tool_sound(src)
 	new /obj/item/stack/sheet/mineral/wood(get_turf(src), drop_amount)
 	qdel(src)
-	return TOOL_ACT_TOOLTYPE_SUCCESS
+	return ITEM_INTERACT_SUCCESS
 
 /obj/structure/barricade/wooden/crude
 	name = "crude plank barricade"
 	desc = "This space is blocked off by a crude assortment of planks."
-	icon_state = "woodenbarricade-old"
+	icon_state = "plankbarricade"
 	drop_amount = 1
 	max_integrity = 50
 	proj_pass_rate = 65
@@ -105,7 +107,7 @@
 
 /obj/structure/barricade/wooden/crude/snow
 	desc = "This space is blocked off by a crude assortment of planks. It seems to be covered in a layer of snow."
-	icon_state = "woodenbarricade-snow-old"
+	icon_state = "plankbarricade_snow"
 	max_integrity = 75
 
 /obj/structure/barricade/wooden/make_debris()
@@ -122,27 +124,36 @@
 	pass_flags_self = LETPASSTHROW
 	bar_material = SAND
 	smoothing_flags = SMOOTH_BITMASK
-	smoothing_groups = list(SMOOTH_GROUP_SANDBAGS)
-	canSmoothWith = list(SMOOTH_GROUP_WALLS, SMOOTH_GROUP_SECURITY_BARRICADE, SMOOTH_GROUP_SANDBAGS)
+	smoothing_groups = SMOOTH_GROUP_SANDBAGS
+	canSmoothWith = SMOOTH_GROUP_SANDBAGS + SMOOTH_GROUP_SECURITY_BARRICADE + SMOOTH_GROUP_WALLS
 
 /obj/structure/barricade/sandbags/Initialize(mapload)
 	. = ..()
 	AddElement(/datum/element/climbable)
+	AddElement(/datum/element/elevation, pixel_shift = 12)
 
 /obj/structure/barricade/security
 	name = "security barrier"
 	desc = "A deployable barrier. Provides good cover in fire fights."
-	icon = 'icons/obj/objects.dmi'
+	icon = 'icons/obj/structures.dmi'
 	icon_state = "barrier0"
 	density = FALSE
 	anchored = FALSE
 	max_integrity = 180
 	proj_pass_rate = 20
-	armor = list(MELEE = 10, BULLET = 50, LASER = 50, ENERGY = 50, BOMB = 10, BIO = 0, FIRE = 10, ACID = 0)
+	armor_type = /datum/armor/barricade_security
 
 	var/deploy_time = 40
 	var/deploy_message = TRUE
 
+
+/datum/armor/barricade_security
+	melee = 10
+	bullet = 50
+	laser = 50
+	energy = 50
+	bomb = 10
+	fire = 10
 
 /obj/structure/barricade/security/Initialize(mapload)
 	. = ..()
@@ -169,10 +180,9 @@
 	. = ..()
 	. += span_notice("Alt-click to toggle modes.")
 
-/obj/item/grenade/barrier/AltClick(mob/living/carbon/user)
-	if(!istype(user) || !user.canUseTopic(src, be_close = TRUE))
-		return
+/obj/item/grenade/barrier/click_alt(mob/living/carbon/user)
 	toggle_mode(user)
+	return CLICK_ACTION_SUCCESS
 
 /obj/item/grenade/barrier/proc/toggle_mode(mob/user)
 	switch(mode)
@@ -225,7 +235,7 @@
 
 /obj/item/deployable_turret_folded/Initialize(mapload)
 	. = ..()
-	AddComponent(/datum/component/deployable, 5 SECONDS, /obj/machinery/deployable_turret/hmg, delete_on_use = TRUE)
+	AddComponent(/datum/component/deployable, 5 SECONDS, /obj/machinery/deployable_turret/hmg)
 
 #undef SINGLE
 #undef VERTICAL

@@ -21,13 +21,17 @@
 	check_flags = NONE
 
 /datum/action/innate/origami/Activate()
+	ADD_TRAIT(owner, TRAIT_PAPER_MASTER, ACTION_TRAIT)
 	to_chat(owner, span_notice("You will now fold origami planes."))
-	button_icon_state = "origami_on"
 	active = TRUE
-	UpdateButtons()
+	build_all_button_icons(UPDATE_BUTTON_ICON)
 
 /datum/action/innate/origami/Deactivate()
+	REMOVE_TRAIT(owner, TRAIT_PAPER_MASTER, ACTION_TRAIT)
 	to_chat(owner, span_notice("You will no longer fold origami planes."))
-	button_icon_state = "origami_off"
 	active = FALSE
-	UpdateButtons()
+	build_all_button_icons(UPDATE_BUTTON_ICON)
+
+/datum/action/innate/origami/apply_button_icon(atom/movable/screen/movable/action_button/current_button, force)
+	button_icon_state = "origami_[active ? "on":"off"]"
+	return ..()

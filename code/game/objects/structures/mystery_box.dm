@@ -10,13 +10,13 @@
 
 // delays for the different stages of the box's state, the visuals, and the audio
 /// How long the box takes to decide what the prize is
-#define MBOX_DURATION_CHOOSING 5 SECONDS
+#define MBOX_DURATION_CHOOSING (5 SECONDS)
 /// How long the box takes to start expiring the offer, though it's still valid until MBOX_DURATION_EXPIRING finishes. Timed to the sound clips
-#define MBOX_DURATION_PRESENTING 3.5 SECONDS
+#define MBOX_DURATION_PRESENTING (3.5 SECONDS)
 /// How long the box takes to start lowering the prize back into itself. When this finishes, the prize is gone
-#define MBOX_DURATION_EXPIRING 4.5 SECONDS
+#define MBOX_DURATION_EXPIRING (4.5 SECONDS)
 /// How long after the box closes until it can go again
-#define MBOX_DURATION_STANDBY 2.7 SECONDS
+#define MBOX_DURATION_STANDBY (2.7 SECONDS)
 
 GLOBAL_LIST_INIT(mystery_box_guns, list(
 	/obj/item/gun/energy/lasercannon,
@@ -30,7 +30,7 @@ GLOBAL_LIST_INIT(mystery_box_guns, list(
 	/obj/item/gun/energy/laser/captain,
 	/obj/item/gun/energy/laser/scatter,
 	/obj/item/gun/energy/temperature,
-	/obj/item/gun/ballistic/revolver/detective,
+	/obj/item/gun/ballistic/revolver/c38/detective,
 	/obj/item/gun/ballistic/revolver/mateba,
 	/obj/item/gun/ballistic/automatic/pistol/deagle/camo,
 	/obj/item/gun/ballistic/automatic/pistol/suppressed,
@@ -47,8 +47,8 @@ GLOBAL_LIST_INIT(mystery_box_guns, list(
 	/obj/item/gun/ballistic/automatic/m90,
 	/obj/item/gun/ballistic/automatic/tommygun,
 	/obj/item/gun/ballistic/automatic/wt550,
-	/obj/item/gun/ballistic/automatic/sniper_rifle,
-	/obj/item/gun/ballistic/rifle/boltaction/brand_new,
+	/obj/item/gun/ballistic/rifle/sniper_rifle,
+	/obj/item/gun/ballistic/rifle/boltaction,
 ))
 
 GLOBAL_LIST_INIT(mystery_box_extended, list(
@@ -65,6 +65,32 @@ GLOBAL_LIST_INIT(mystery_box_extended, list(
 	/obj/item/melee/energy/sword/saber,
 	/obj/item/spear,
 	/obj/item/circular_saw,
+))
+
+GLOBAL_LIST_INIT(mystery_magic, list(
+	/obj/item/gun/magic/wand/arcane_barrage,
+	/obj/item/gun/magic/wand/arcane_barrage/blood,
+	/obj/item/gun/magic/wand/fireball,
+	/obj/item/gun/magic/wand/resurrection,
+	/obj/item/gun/magic/wand/death,
+	/obj/item/gun/magic/wand/polymorph,
+	/obj/item/gun/magic/wand/teleport,
+	/obj/item/gun/magic/wand/door,
+	/obj/item/gun/magic/wand/nothing,
+	/obj/item/storage/belt/wands/full,
+	/obj/item/gun/magic/staff/healing,
+	/obj/item/gun/magic/staff/change,
+	/obj/item/gun/magic/staff/animate,
+	/obj/item/gun/magic/staff/chaos,
+	/obj/item/gun/magic/staff/door,
+	/obj/item/gun/magic/staff/honk,
+	/obj/item/gun/magic/staff/spellblade,
+	/obj/item/gun/magic/staff/locker,
+	/obj/item/gun/magic/staff/flying,
+	/obj/item/gun/magic/staff/babel,
+	/obj/item/singularityhammer,
+	/obj/item/mod/control/pre_equipped/enchanted,
+	/obj/item/runic_vendor_scepter,
 ))
 
 
@@ -174,7 +200,7 @@ GLOBAL_LIST_INIT(mystery_box_extended, list(
 	SSsounds.free_sound_channel(current_sound_channel)
 	current_sound_channel = null
 	box_state = MYSTERY_BOX_STANDBY
-	Shake(10, 0, 0.5 SECONDS)
+	Shake(3, 0, 0.5 SECONDS)
 
 /// Someone attacked the box with an empty hand, spawn the shown prize and give it to them, then close the box
 /obj/structure/mystery_box/proc/grant_weapon(mob/living/user)
@@ -187,7 +213,7 @@ GLOBAL_LIST_INIT(mystery_box_extended, list(
 		if(grant_extra_mag && istype(instantiated_gun, /obj/item/gun/ballistic))
 			var/obj/item/gun/ballistic/instantiated_ballistic = instantiated_gun
 			if(!instantiated_ballistic.internal_magazine)
-				var/obj/item/ammo_box/magazine/extra_mag = new instantiated_ballistic.mag_type(loc)
+				var/obj/item/ammo_box/magazine/extra_mag = new instantiated_ballistic.spawn_magazine_type(loc)
 				user.put_in_hands(extra_mag)
 
 	user.visible_message(span_notice("[user] takes [presented_item] from [src]."), span_notice("You take [presented_item] from [src]."), vision_distance = COMBAT_MESSAGE_RANGE)
@@ -207,18 +233,24 @@ GLOBAL_LIST_INIT(mystery_box_extended, list(
 /obj/structure/mystery_box/tdome/generate_valid_types()
 	valid_types = GLOB.mystery_box_guns + GLOB.mystery_box_extended
 
+/obj/structure/mystery_box/wands
+	desc = "A wooden crate that seems equally magical and mysterious, capable of granting the user all kinds of different magical items."
+
+/obj/structure/mystery_box/wands/generate_valid_types()
+	valid_types = GLOB.mystery_magic
+
 
 /// This represents the item that comes out of the box and is constantly changing before the box finishes deciding. Can probably be just an /atom or /movable.
 /obj/mystery_box_item
 	name = "???"
 	desc = "Who knows what it'll be??"
 	icon = 'icons/obj/weapons/guns/ballistic.dmi'
-	icon_state = "detective"
+	icon_state = "revolver"
 	pixel_y = -8
 	uses_integrity = FALSE
 
 	/// The currently selected item. Constantly changes while choosing, determines what is spawned if the prize is claimed, and its current icon
-	var/selected_path = /obj/item/gun/ballistic/revolver/detective
+	var/selected_path = /obj/item/gun/ballistic/revolver/c38/detective
 	/// The box that spawned this
 	var/obj/structure/mystery_box/parent_box
 	/// Whether this prize is currently claimable
@@ -272,7 +304,7 @@ GLOBAL_LIST_INIT(mystery_box_extended, list(
 
 /obj/mystery_box_item/proc/present_item()
 	var/obj/item/selected_item = selected_path
-	add_filter("ready_outline", 2, list("type" = "outline", "color" = "#FBFF23", "size" = 0.2))
+	add_filter("ready_outline", 2, list("type" = "outline", "color" = COLOR_VIVID_YELLOW, "size" = 0.2))
 	name = initial(selected_item.name)
 	parent_box.present_weapon()
 	claimable = TRUE

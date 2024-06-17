@@ -3,6 +3,7 @@
 	icon = 'icons/obj/holiday/christmas.dmi'
 	icon_state = "cracker"
 	desc = "Directions for use: Requires two people, one to pull each end."
+	w_class = WEIGHT_CLASS_TINY
 	/// The crack state of the toy. If set to TRUE, you can no longer crack it by attacking.
 	var/cracked = FALSE
 
@@ -39,7 +40,7 @@
 	icon_state = "xmashat"
 	desc = "A crappy paper hat that you are REQUIRED to wear."
 	flags_inv = 0
-	armor = list(MELEE = 0, BULLET = 0, LASER = 0,ENERGY = 0, BOMB = 0, BIO = 0, FIRE = 0, ACID = 0)
+	armor_type = /datum/armor/none
 	dog_fashion = /datum/dog_fashion/head/festive
 
 /obj/effect/spawner/xmastree
@@ -69,25 +70,25 @@
 /datum/round_event_control/santa
 	name = "Visit by Santa"
 	holidayID = CHRISTMAS
-	typepath = /datum/round_event/santa
+	typepath = /datum/round_event/ghost_role/santa
 	weight = 20
 	max_occurrences = 1
 	earliest_start = 30 MINUTES
 	category = EVENT_CATEGORY_HOLIDAY
 	description = "Spawns santa, who shall roam the station, handing out gifts."
 
-/datum/round_event/santa
+/datum/round_event/ghost_role/santa
+	role_name = "Santa"
 	var/mob/living/carbon/human/santa //who is our santa?
 
-/datum/round_event/santa/announce(fake)
+/datum/round_event/ghost_role/santa/announce(fake)
 	priority_announce("Santa is coming to town!", "Unknown Transmission")
 
-/datum/round_event/santa/start()
-	var/list/candidates = poll_ghost_candidates("Santa is coming to town! Do you want to be Santa?", poll_time=150)
-	if(LAZYLEN(candidates))
-		var/mob/dead/observer/C = pick(candidates)
-		santa = new /mob/living/carbon/human(pick(GLOB.blobstart))
-		santa.key = C.key
-
-		var/datum/antagonist/santa/A = new
-		santa.mind.add_antag_datum(A)
+/datum/round_event/ghost_role/santa/start()
+	var/mob/chosen_one = SSpolling.poll_ghost_candidates("Santa is coming to town! Do you want to be [span_notice("Santa")]?", poll_time = 15 SECONDS, alert_pic = /obj/item/clothing/head/costume/santa, role_name_text = "santa", amount_to_pick = 1)
+	if(isnull(chosen_one))
+		return NOT_ENOUGH_PLAYERS
+	santa = new /mob/living/carbon/human(pick(GLOB.blobstart))
+	santa.key = chosen_one.key
+	var/datum/antagonist/santa/A = new
+	santa.mind.add_antag_datum(A)

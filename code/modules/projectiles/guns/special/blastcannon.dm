@@ -62,11 +62,11 @@
 	cached_target = null
 	return ..()
 
-/obj/item/gun/blastcannon/handle_atom_del(atom/A)
-	if(A == bomb)
+/obj/item/gun/blastcannon/Exited(atom/movable/gone, direction)
+	. = ..()
+	if(gone == bomb)
 		bomb = null
 		update_appearance()
-	return ..()
 
 /obj/item/gun/blastcannon/assume_air(datum/gas_mixture/giver)
 	qdel(giver)
@@ -110,8 +110,8 @@
 	update_appearance()
 	return TRUE
 
-/obj/item/gun/blastcannon/afterattack(atom/target, mob/user, flag, params)
-	if((!bomb && bombcheck) || !target || (get_dist(get_turf(target), get_turf(user)) <= 2))
+/obj/item/gun/blastcannon/try_fire_gun(atom/target, mob/living/user, params)
+	if((!bomb && bombcheck) || isnull(target) || (get_dist(get_turf(target), get_turf(user)) <= 2))
 		return ..()
 
 	cached_target = WEAKREF(target)
@@ -121,12 +121,12 @@
 			span_danger("[user] points [src] at [target]!"),
 			span_danger("You point [src] at [target]!")
 		)
-		return
+		return FALSE
 
 	cached_firer = WEAKREF(user)
 	if(!bomb)
-		fire_debug(target, user, flag, params)
-		return
+		fire_debug(target, user, params)
+		return TRUE
 
 	playsound(src, dry_fire_sound, 30, TRUE) // *click
 	user.visible_message(
@@ -139,8 +139,7 @@
 	user.log_message("opened blastcannon transfer valve at [AREACOORD(current_turf)] while aiming at [AREACOORD(target_turf)] (target).", LOG_GAME)
 	bomb.toggle_valve()
 	update_appearance()
-	return
-
+	return TRUE
 
 /**
  * Channels an internal explosion into a blastwave projectile.
@@ -290,7 +289,6 @@
 	name = "blast wave"
 	icon_state = "blastwave"
 	damage = 0
-	nodamage = FALSE
 	armor_flag = BOMB // Doesn't actually have any functional purpose. But it makes sense.
 	movement_type = FLYING
 	projectile_phasing = ALL // just blows up the turfs lmao
@@ -312,6 +310,10 @@
 	src.reactionary = reactionary
 	return ..()
 
+// Though the projectile itself is not damaging its effects are
+/obj/projectile/blastwave/is_hostile_projectile()
+	return TRUE
+
 /obj/projectile/blastwave/Range()
 	. = ..()
 	if(QDELETED(src))
@@ -320,13 +322,7 @@
 	var/decrement = 1
 	var/atom/location = loc
 	if (reactionary)
-		if(location.density || !isturf(location))
-			decrement += location.explosion_block
-		for(var/obj/thing in location)
-			if (thing == src)
-				continue
-			var/the_block = thing.explosion_block
-			decrement += the_block == EXPLOSION_BLOCK_PROC ? thing.GetExplosionBlock() : the_block
+		decrement += location.explosive_resistance
 
 	range = max(range - decrement + 1, 0) // Already decremented by 1 in the parent. Exists so that if we pass through something with negative block it extends the range.
 	heavy_ex_range = max(heavy_ex_range - decrement, 0)

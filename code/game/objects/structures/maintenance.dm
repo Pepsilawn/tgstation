@@ -9,7 +9,7 @@ at the cost of risking a vicious bite.**/
 	density = FALSE
 	///This var stores the hidden item that might be able to be retrieved from the trap
 	var/obj/item/hidden_item
-	///This var determines if there is a chance to recieve a bite when sticking your hand into the water.
+	///This var determines if there is a chance to receive a bite when sticking your hand into the water.
 	var/critter_infested = TRUE
 	///weighted loot table for what loot you can find inside the moisture trap.
 	///the actual loot isn't that great and should probably be improved and expanded later.
@@ -24,9 +24,8 @@ at the cost of risking a vicious bite.**/
 		/obj/item/restraints/handcuffs/cable/green = 1,
 		/obj/item/restraints/handcuffs/cable/pink = 1,
 		/obj/item/restraints/handcuffs/alien = 2,
-		/obj/item/coin/bananium = 9,
+		/obj/item/coin/bananium = 10,
 		/obj/item/knife/butcher = 5,
-		/obj/item/coin/mythril = 1,
 	)
 
 
@@ -116,7 +115,7 @@ at the cost of risking a vicious bite.**/
 #define ALTAR_STAGEONE 1
 #define ALTAR_STAGETWO 2
 #define ALTAR_STAGETHREE 3
-#define ALTAR_TIME 9.5 SECONDS
+#define ALTAR_TIME (9.5 SECONDS)
 
 /obj/structure/destructible/cult/pants_altar
 	name = "strange structure"
@@ -151,7 +150,7 @@ at the cost of risking a vicious bite.**/
 	switch(altar_result)
 		if("Change Color")
 			var/chosen_color = input(user, "", "Choose Color", pants_color) as color|null
-			if(!isnull(chosen_color) && user.canUseTopic(src, be_close = TRUE))
+			if(!isnull(chosen_color) && user.can_perform_action(src))
 				pants_color = chosen_color
 		if("Create Artefact")
 			if(!COOLDOWN_FINISHED(src, use_cooldown) || status != ALTAR_INACTIVE)
@@ -198,7 +197,7 @@ at the cost of risking a vicious bite.**/
 	update_icon()
 	visible_message(span_warning("You start feeling nauseous..."))
 	for(var/mob/living/viewing_mob in viewers(7, src))
-		viewing_mob.blur_eyes(10)
+		viewing_mob.set_eye_blur_if_lower(20 SECONDS)
 		viewing_mob.adjust_confusion(10 SECONDS)
 	addtimer(CALLBACK(src, PROC_REF(pants_stagethree)), ALTAR_TIME)
 
@@ -267,6 +266,7 @@ at the cost of risking a vicious bite.**/
 		COMSIG_ATOM_EXIT = PROC_REF(blow_steam),
 	)
 	AddElement(/datum/element/connect_loc, loc_connections)
+	register_context()
 	update_icon_state()
 
 /obj/structure/steam_vent/attack_hand(mob/living/user, list/modifiers)
@@ -283,6 +283,16 @@ at the cost of risking a vicious bite.**/
 		return
 	blow_steam()
 
+/obj/structure/steam_vent/add_context(atom/source, list/context, obj/item/held_item, mob/user)
+	. = ..()
+	if(isnull(held_item))
+		context[SCREENTIP_CONTEXT_LMB] = vent_active ? "Close valve" : "Open valve"
+		return CONTEXTUAL_SCREENTIP_SET
+	if(held_item.tool_behaviour == TOOL_WRENCH)
+		context[SCREENTIP_CONTEXT_RMB] = "Deconstruct"
+		return CONTEXTUAL_SCREENTIP_SET
+	return .
+
 /obj/structure/steam_vent/wrench_act_secondary(mob/living/user, obj/item/tool)
 	. = ..()
 	if(vent_active)
@@ -293,11 +303,9 @@ at the cost of risking a vicious bite.**/
 		deconstruct()
 		return TRUE
 
-/obj/structure/steam_vent/deconstruct(disassembled = TRUE)
-	if(!(flags_1 & NODECONSTRUCT_1))
-		new /obj/item/stack/sheet/iron(loc, 1)
-		new /obj/item/stock_parts/water_recycler(loc, 1)
-	qdel(src)
+/obj/structure/steam_vent/atom_deconstruct(disassembled = TRUE)
+	new /obj/item/stack/sheet/iron(loc, 1)
+	new /obj/item/stock_parts/water_recycler(loc, 1)
 
 /**
  * Creates "steam" smoke, and determines when the vent needs to block line of sight via reset_opacity.

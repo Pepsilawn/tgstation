@@ -6,14 +6,18 @@
 	move_resist = INFINITY
 	status_flags = GODMODE  // You can't damage it.
 	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
-	see_in_dark = 7
 	invisibility = INVISIBILITY_ABSTRACT // No one can see us
-	sight = SEE_SELF | SEE_BLACKNESS
-	move_on_shuttle = FALSE
+	sight = SEE_SELF
+	/// Toggles if the camera can move on shuttles
+	var/move_on_shuttle = FALSE
+	/// Toggles if the camera can use emotes
+	var/has_emotes = FALSE
 
 /mob/camera/Initialize(mapload)
 	. = ..()
 	SSpoints_of_interest.make_point_of_interest(src)
+	if(!move_on_shuttle)
+		ADD_TRAIT(src, TRAIT_BLOCK_SHUTTLE_MOVEMENT, INNATE_TRAIT)
 
 /mob/camera/experience_pressure_difference()
 	return
@@ -40,4 +44,10 @@
 	return ..()
 
 /mob/camera/emote(act, m_type=1, message = null, intentional = FALSE, force_silence = FALSE)
+	if(has_emotes)
+		return ..()
 	return FALSE
+
+/mob/camera/update_sight()
+	lighting_color_cutoffs = list(lighting_cutoff_red, lighting_cutoff_green, lighting_cutoff_blue)
+	return ..()

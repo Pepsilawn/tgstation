@@ -15,19 +15,6 @@
 	unit_name = "solar panel control board"
 	export_types = list(/obj/item/circuitboard/computer/solar_control)
 
-// Computer and Tablet Parts
-/datum/export/modular_part/idcard
-	cost = CARGO_CRATE_VALUE * 0.2
-	unit_name = "computer ID card slot"
-	export_types = list(/obj/item/computer_hardware/card_slot)
-	include_subtypes = TRUE
-
-/datum/export/modular_part/misc
-	cost = CARGO_CRATE_VALUE * 0.1
-	unit_name = "miscellaneous computer part"
-	export_types = list(/obj/item/computer_hardware)
-	include_subtypes = TRUE
-
 //Data Disks
 /datum/export/modular_part/portabledrive/advanced
 	cost = CARGO_CRATE_VALUE * 0.4
@@ -46,3 +33,9 @@
 	unit_name = "data disk"
 	export_types = list(/obj/item/computer_disk)
 	include_subtypes = TRUE
+
+/datum/export/refill_canister
+	cost = CARGO_CRATE_VALUE * 0.5 //If someone want to make this worth more as it empties, go ahead
+	unit_name = "vending refill canister"
+	message = "Thank you for restocking the station!"
+	export_types = list(/obj/item/vending_refill)

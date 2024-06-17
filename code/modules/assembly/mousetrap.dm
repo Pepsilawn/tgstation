@@ -3,7 +3,7 @@
 	desc = "A handy little spring-loaded trap for catching pesty rodents."
 	icon_state = "mousetrap"
 	inhand_icon_state = "mousetrap"
-	custom_materials = list(/datum/material/iron=100)
+	custom_materials = list(/datum/material/iron=SMALL_MATERIAL_AMOUNT)
 	attachable = TRUE
 	var/armed = FALSE
 	drop_sound = 'sound/items/handling/component_drop.ogg'
@@ -87,9 +87,9 @@
 				var/mob/living/carbon/human/user = usr
 				if((HAS_TRAIT(user, TRAIT_DUMB) || HAS_TRAIT(user, TRAIT_CLUMSY)) && prob(50))
 					to_chat(user, span_warning("Your hand slips, setting off the trigger!"))
-					pulse(FALSE)
+					pulse()
 		update_appearance()
-		playsound(src, 'sound/weapons/handcuffs.ogg', 30, TRUE, -3)
+		playsound(loc, 'sound/weapons/handcuffs.ogg', 30, TRUE, -3)
 
 /obj/item/assembly/mousetrap/update_icon_state()
 	icon_state = "mousetrap[armed ? "armed" : ""]"
@@ -117,7 +117,7 @@
 		var/mob/living/carbon/human/victim = target
 		if(HAS_TRAIT(victim, TRAIT_PIERCEIMMUNE))
 			playsound(src, 'sound/effects/snap.ogg', 50, TRUE)
-			pulse(FALSE)
+			pulse()
 			return FALSE
 		switch(type)
 			if("feet")
@@ -138,17 +138,13 @@
 	else if(ismouse(target))
 		var/mob/living/basic/mouse/splatted = target
 		visible_message(span_boldannounce("SPLAT!"))
-		if(splatted.health <= 5)
-			splatted.splat()
-		else
-			splatted.adjust_health(5)
-			splatted.Stun(1 SECONDS)
+		splatted.splat() // mousetraps are instadeath for mice
 
 	else if(isregalrat(target))
 		visible_message(span_boldannounce("Skreeeee!")) //He's simply too large to be affected by a tiny mouse trap.
 
 	playsound(src, 'sound/effects/snap.ogg', 50, TRUE)
-	pulse(FALSE)
+	pulse()
 
 /**
  * clumsy_check: Sets off the mousetrap if handled by a clown (with some probability)
@@ -193,10 +189,10 @@
 	if(armed)
 		if(ismob(AM))
 			var/mob/MM = AM
-			if(!(MM.movement_type & FLYING))
+			if(!(MM.movement_type & MOVETYPES_NOT_TOUCHING_GROUND))
 				if(ishuman(AM))
 					var/mob/living/carbon/H = AM
-					if(H.m_intent == MOVE_INTENT_RUN)
+					if(H.move_intent == MOVE_INTENT_RUN)
 						INVOKE_ASYNC(src, PROC_REF(triggered), H)
 						H.visible_message(span_warning("[H] accidentally steps on [src]."), \
 							span_warning("You accidentally step on [src]"))

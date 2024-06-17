@@ -1,23 +1,41 @@
-export type AntagGroup = [string, Antags];
+import { BooleanLike } from 'common/react';
 
-export type Antags = Array<Observable & { antag: string }>;
+import { VIEWMODE } from './constants';
+
+export type Antagonist = Observable & { antag: string; antag_group: string };
+
+export type AntagGroup = [string, Antagonist[]];
 
 export type OrbitData = {
-  alive: Array<Observable>;
-  antagonists: Antags;
-  dead: Array<Observable>;
-  ghosts: Array<Observable>;
-  misc: Array<Observable>;
-  npcs: Array<Observable>;
+  alive: Observable[];
+  antagonists: Antagonist[];
+  critical: Critical[];
+  dead: Observable[];
+  deadchat_controlled: Observable[];
+  ghosts: Observable[];
+  misc: Observable[];
+  npcs: Observable[];
+  orbiting: Observable | null;
 };
 
 export type Observable = {
-  extra?: string;
   full_name: string;
-  health?: number;
-  job?: string;
-  job_icon?: string;
-  name?: string;
-  orbiters?: number;
+  ref: string;
+  // Optionals
+} & Partial<{
+  client: BooleanLike;
+  extra: string;
+  health: number;
+  icon: string;
+  job: string;
+  name: string;
+  orbiters: number;
+}>;
+
+type Critical = {
+  extra: string;
+  full_name: string;
   ref: string;
 };
+
+export type ViewMode = (typeof VIEWMODE)[keyof typeof VIEWMODE];

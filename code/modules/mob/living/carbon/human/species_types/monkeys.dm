@@ -1,40 +1,28 @@
+#define MONKEY_SPEC_ATTACK_BITE_MISS_CHANCE 25
+
 /datum/species/monkey
 	name = "Monkey"
 	id = SPECIES_MONKEY
-	say_mod = "chimpers"
-	bodytype = BODYTYPE_ORGANIC | BODYTYPE_MONKEY
 	external_organs = list(
-		/obj/item/organ/external/tail/monkey = "Monkey"
+		/obj/item/organ/external/tail/monkey = "Monkey",
 	)
+	mutanttongue = /obj/item/organ/internal/tongue/monkey
 	mutantbrain = /obj/item/organ/internal/brain/primate
 	skinned_type = /obj/item/stack/sheet/animalhide/monkey
 	meat = /obj/item/food/meat/slab/monkey
 	knife_butcher_results = list(/obj/item/food/meat/slab/monkey = 5, /obj/item/stack/sheet/animalhide/monkey = 1)
-	species_traits = list(
-		HAS_FLESH,
-		HAS_BONE,
-		NO_UNDERWEAR,
-		LIPS,
-		NOEYESPRITES,
-		NOBLOODOVERLAY,
-		NOTRANSSTING,
-		NOAUGMENTS,
-	)
 	inherent_traits = list(
 		TRAIT_GUN_NATURAL,
-		//TRAIT_LITERATE,
+		TRAIT_NO_AUGMENTS,
+		TRAIT_NO_BLOOD_OVERLAY,
+		TRAIT_NO_DNA_COPY,
+		TRAIT_NO_UNDERWEAR,
 		TRAIT_VENTCRAWLER_NUDE,
 		TRAIT_WEAK_SOUL,
 	)
-	no_equip = list(
-		ITEM_SLOT_OCLOTHING,
-		ITEM_SLOT_GLOVES,
-		ITEM_SLOT_FEET,
-		ITEM_SLOT_SUITSTORE,
-	)
+	no_equip_flags = ITEM_SLOT_OCLOTHING | ITEM_SLOT_GLOVES | ITEM_SLOT_FEET | ITEM_SLOT_SUITSTORE
 	changesource_flags = MIRROR_BADMIN | WABBAJACK | MIRROR_PRIDE | MIRROR_MAGIC | ERT_SPAWN | SLIME_EXTRACT
-	liked_food = MEAT | FRUIT | BUGS
-	disliked_food = CLOTH
+	inherent_factions = list(FACTION_MONKEY)
 	sexes = FALSE
 	species_language_holder = /datum/language_holder/monkey
 
@@ -53,76 +41,32 @@
 	payday_modifier = 1.5
 	ai_controlled_species = TRUE
 
-
-
-/datum/species/monkey/random_name(gender,unique,lastname)
-	var/randname = "monkey ([rand(1,999)])"
-
-	return randname
-
-/datum/species/monkey/on_species_gain(mob/living/carbon/human/H, datum/species/old_species)
+/datum/species/monkey/on_species_gain(mob/living/carbon/human/human_who_gained_species, datum/species/old_species, pref_load)
 	. = ..()
-	H.pass_flags |= PASSTABLE
-	H.butcher_results = knife_butcher_results
-	H.dna.add_mutation(/datum/mutation/human/race, MUT_NORMAL)
-	H.dna.activate_mutation(/datum/mutation/human/race)
+	passtable_on(human_who_gained_species, SPECIES_TRAIT)
+	human_who_gained_species.dna.add_mutation(/datum/mutation/human/race, MUT_NORMAL)
+	human_who_gained_species.dna.activate_mutation(/datum/mutation/human/race)
+	human_who_gained_species.AddElement(/datum/element/human_biter)
 
-
-/datum/species/monkey/on_species_loss(mob/living/carbon/C)
+/datum/species/monkey/on_species_loss(mob/living/carbon/human/C)
 	. = ..()
-	C.pass_flags = initial(C.pass_flags)
-	C.butcher_results = null
+	passtable_off(C, SPECIES_TRAIT)
 	C.dna.remove_mutation(/datum/mutation/human/race)
-
-/datum/species/monkey/spec_unarmedattack(mob/living/carbon/human/user, atom/target, modifiers)
-	if(HAS_TRAIT(user, TRAIT_HANDS_BLOCKED))
-		if(!iscarbon(target))
-			return TRUE
-		var/mob/living/carbon/victim = target
-		if(user.is_muzzled())
-			return TRUE
-		var/obj/item/bodypart/affecting = null
-		if(ishuman(victim))
-			var/mob/living/carbon/human/human_victim = victim
-			affecting = human_victim.get_bodypart(human_victim.get_random_valid_zone(even_weights = TRUE))
-		var/armor = victim.run_armor_check(affecting, MELEE)
-		if(prob(25))
-			victim.visible_message(span_danger("[user]'s bite misses [victim]!"),
-				span_danger("You avoid [user]'s bite!"), span_hear("You hear jaws snapping shut!"), COMBAT_MESSAGE_RANGE, user)
-			to_chat(user, span_danger("Your bite misses [victim]!"))
-			return TRUE
-		var/obj/item/bodypart/head/mouth = user.get_bodypart(BODY_ZONE_HEAD)
-		victim.apply_damage(rand(mouth.unarmed_damage_low, mouth.unarmed_damage_high), BRUTE, affecting, armor)
-		victim.visible_message(span_danger("[name] bites [victim]!"),
-			span_userdanger("[name] bites you!"), span_hear("You hear a chomp!"), COMBAT_MESSAGE_RANGE, name)
-		to_chat(user, span_danger("You bite [victim]!"))
-		if(armor >= 2)
-			return TRUE
-		for(var/datum/disease/bite_infection as anything in user.diseases)
-			if(bite_infection.spread_flags & (DISEASE_SPREAD_SPECIAL | DISEASE_SPREAD_NON_CONTAGIOUS))
-				continue
-			victim.ForceContractDisease(bite_infection)
-		return TRUE
-	if(!ISADVANCEDTOOLUSER(user))
-		target.attack_paw(user, modifiers)
-		return TRUE
-	return ..()
+	C.RemoveElement(/datum/element/human_biter)
 
 /datum/species/monkey/check_roundstart_eligible()
-	if(check_holidays(MONKEYDAY))
+	// STOP ADDING MONKEY SUBTYPES YOU HEATHEN
+	// ok we killed monkey subtypes but we're keeping this in cause we can't trust you fuckers
+	if(check_holidays(MONKEYDAY) && id == SPECIES_MONKEY)
 		return TRUE
 	return ..()
 
 /datum/species/monkey/get_scream_sound(mob/living/carbon/human/monkey)
-	return pick(
-		'sound/creatures/monkey/monkey_screech_1.ogg',
-		'sound/creatures/monkey/monkey_screech_2.ogg',
-		'sound/creatures/monkey/monkey_screech_3.ogg',
-		'sound/creatures/monkey/monkey_screech_4.ogg',
-		'sound/creatures/monkey/monkey_screech_5.ogg',
-		'sound/creatures/monkey/monkey_screech_6.ogg',
-		'sound/creatures/monkey/monkey_screech_7.ogg',
-	)
+	return get_sfx(SFX_SCREECH)
+
+/datum/species/monkey/get_physical_attributes()
+	return "Monkeys are slippery, can crawl into vents, and are more dextrous than humans.. but only when stealing things. \
+		Natural monkeys cannot operate machinery or most tools with their paws, but unusually clever monkeys or those that were once something else can."
 
 /datum/species/monkey/get_species_description()
 	return "Monkeys are a type of primate that exist between humans and animals on the evolutionary chain. \
@@ -190,14 +134,18 @@
 
 /datum/action/item_action/organ_action/toggle_trip
 	name = "Toggle Tripping"
-	icon_icon = 'icons/mob/actions/actions_changeling.dmi'
+	button_icon = 'icons/mob/actions/actions_changeling.dmi'
 	button_icon_state = "lesser_form"
 	background_icon_state = "bg_default_on"
+	overlay_icon_state = "bg_default_border"
 
 /datum/action/item_action/organ_action/toggle_trip/Trigger(trigger_flags)
 	. = ..()
+	if(!.)
+		return
+
 	var/obj/item/organ/internal/brain/primate/monkey_brain = target
-	if(monkey_brain.tripping == TRUE)
+	if(monkey_brain.tripping)
 		monkey_brain.tripping = FALSE
 		background_icon_state = "bg_default"
 		to_chat(monkey_brain.owner, span_notice("You will now avoid stumbling while colliding with people who are in combat mode."))
@@ -205,29 +153,25 @@
 		monkey_brain.tripping = TRUE
 		background_icon_state = "bg_default_on"
 		to_chat(monkey_brain.owner, span_notice("You will now stumble while while colliding with people who are in combat mode."))
-	UpdateButtons()
+	build_all_button_icons()
 
-
-/obj/item/organ/internal/brain/primate/Insert(mob/living/carbon/primate, special = FALSE, drop_if_replaced = FALSE)
+/obj/item/organ/internal/brain/primate/on_mob_insert(mob/living/carbon/primate)
 	. = ..()
-	RegisterSignal(primate, COMSIG_MOVABLE_CROSS, PROC_REF(on_crossed), TRUE)
+	RegisterSignal(primate, COMSIG_LIVING_MOB_BUMPED, PROC_REF(on_mob_bump))
 
-/obj/item/organ/internal/brain/primate/Remove(mob/living/carbon/primate, special = FALSE, no_id_transfer = FALSE)
-	UnregisterSignal(primate, COMSIG_MOVABLE_CROSS)
-	return ..()
+/obj/item/organ/internal/brain/primate/on_mob_remove(mob/living/carbon/primate)
+	. = ..()
+	UnregisterSignal(primate, COMSIG_LIVING_MOB_BUMPED)
 
-/obj/item/organ/internal/brain/primate/proc/on_crossed(datum/source, atom/movable/crossed)
+/obj/item/organ/internal/brain/primate/proc/on_mob_bump(mob/source, mob/living/crossing_mob)
 	SIGNAL_HANDLER
-	if(!tripping)
+	if(!tripping || !crossing_mob.combat_mode)
 		return
-	if(IS_DEAD_OR_INCAP(owner) || !isliving(crossed))
-		return
-	var/mob/living/in_the_way_mob = crossed
-	if(iscarbon(in_the_way_mob) && !in_the_way_mob.combat_mode)
-		return
-	if(in_the_way_mob.pass_flags & PASSTABLE)
-		return
-	in_the_way_mob.knockOver(owner)
+	crossing_mob.knockOver(owner)
 
 /obj/item/organ/internal/brain/primate/get_attacking_limb(mob/living/carbon/human/target)
-	return owner.get_bodypart(BODY_ZONE_HEAD)
+	if(!HAS_TRAIT(owner, TRAIT_ADVANCEDTOOLUSER))
+		return owner.get_bodypart(BODY_ZONE_HEAD)
+	return ..()
+
+#undef MONKEY_SPEC_ATTACK_BITE_MISS_CHANCE

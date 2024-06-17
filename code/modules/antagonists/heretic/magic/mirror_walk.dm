@@ -3,8 +3,9 @@
 	desc = "Allows you to traverse invisibly and freely across the station within the realm of the mirror. \
 		You can only enter and exit the realm of mirrors when nearby reflective surfaces and items, \
 		such as windows, mirrors, and reflective walls or equipment."
-	background_icon_state = "bg_ecult"
-	icon_icon = 'icons/mob/actions/actions_minor_antag.dmi'
+	background_icon_state = "bg_heretic"
+	overlay_icon_state = "bg_heretic_border"
+	button_icon = 'icons/mob/actions/actions_minor_antag.dmi'
 	button_icon_state = "ninja_cloak"
 
 	cooldown_time = 6 SECONDS
@@ -23,7 +24,7 @@
 
 /datum/action/cooldown/spell/jaunt/mirror_walk/Grant(mob/grant_to)
 	. = ..()
-	RegisterSignal(grant_to, COMSIG_MOVABLE_MOVED, PROC_REF(update_icon_on_signal))
+	RegisterSignal(grant_to, COMSIG_MOVABLE_MOVED, PROC_REF(update_status_on_signal))
 
 /datum/action/cooldown/spell/jaunt/mirror_walk/Remove(mob/remove_from)
 	. = ..()
@@ -63,7 +64,7 @@
 
 	jaunter.Beam(nearby_reflection, icon_state = "light_beam", time = phase_out_time)
 	nearby_reflection.visible_message(span_warning("[nearby_reflection] begins to shimmer and shake slightly!"))
-	if(!do_after(jaunter, phase_out_time, nearby_reflection, IGNORE_USER_LOC_CHANGE|IGNORE_INCAPACITATED))
+	if(!do_after(jaunter, phase_out_time, nearby_reflection, IGNORE_USER_LOC_CHANGE|IGNORE_INCAPACITATED, hidden = TRUE))
 		return
 
 	playsound(jaunter, 'sound/magic/ethereal_enter.ogg', 50, TRUE, -1)
@@ -77,7 +78,7 @@
 	var/obj/effect/dummy/phased_mob/jaunt = ..(jaunter, get_turf(nearby_reflection))
 	if (!jaunt)
 		return FALSE
-	RegisterSignal(jaunt, COMSIG_MOVABLE_MOVED, PROC_REF(update_icon_on_signal))
+	RegisterSignal(jaunt, COMSIG_MOVABLE_MOVED, PROC_REF(update_status_on_signal))
 	return jaunt
 
 /datum/action/cooldown/spell/jaunt/mirror_walk/exit_jaunt(mob/living/unjaunter, turf/loc_override)
@@ -95,7 +96,7 @@
 
 	nearby_reflection.Beam(phase_turf, icon_state = "light_beam", time = phase_in_time)
 	nearby_reflection.visible_message(span_warning("[nearby_reflection] begins to shimmer and shake slightly!"))
-	if(!do_after(unjaunter, phase_in_time, nearby_reflection))
+	if(!do_after(unjaunter, phase_in_time, nearby_reflection, hidden = TRUE))
 		return FALSE
 
 	// We can move around while phasing in, but we'll always end up where we started it.

@@ -77,13 +77,7 @@
 #define ui_building "EAST-4:22,SOUTH:21"
 #define ui_language_menu "EAST-4:6,SOUTH:21"
 #define ui_navigate_menu "EAST-4:22,SOUTH:5"
-
-//Upper-middle right (alerts)
-#define ui_alert1 "EAST-1:28,CENTER+5:27"
-#define ui_alert2 "EAST-1:28,CENTER+4:25"
-#define ui_alert3 "EAST-1:28,CENTER+3:23"
-#define ui_alert4 "EAST-1:28,CENTER+2:21"
-#define ui_alert5 "EAST-1:28,CENTER+1:19"
+#define ui_floor_menu "EAST-4:14,SOUTH:37"
 
 //Upper left (action buttons)
 #define ui_action_palette "WEST+0:23,NORTH-1:5"
@@ -97,6 +91,7 @@
 #define ui_health "EAST-1:28,CENTER-1:19"
 #define ui_internal "EAST-1:28,CENTER+1:21"
 #define ui_mood "EAST-1:28,CENTER:21"
+#define ui_hunger "EAST-1:2,CENTER:21"
 #define ui_spacesuit "EAST-1:28,CENTER-4:14"
 #define ui_stamina "EAST-1:28,CENTER-3:14"
 
@@ -115,15 +110,9 @@
 #define ui_living_pull "EAST-1:28,CENTER-3:15"
 #define ui_living_healthdoll "EAST-1:28,CENTER-1:15"
 
-//Monkeys
-#define ui_monkey_head "CENTER-5:13,SOUTH:5"
-#define ui_monkey_mask "CENTER-4:14,SOUTH:5"
-#define ui_monkey_neck "CENTER-3:15,SOUTH:5"
-#define ui_monkey_back "CENTER-2:16,SOUTH:5"
-
 //Drones
 #define ui_drone_drop "CENTER+1:18,SOUTH:5"
-#define ui_drone_pull "CENTER+2:2,SOUTH:5"
+#define ui_drone_pull "CENTER+1.5:2,SOUTH:5"
 #define ui_drone_storage "CENTER-2:14,SOUTH:5"
 #define ui_drone_head "CENTER-3:14,SOUTH:5"
 
@@ -135,14 +124,15 @@
 #define ui_borg_lamp "CENTER-3:16, SOUTH:5"
 #define ui_borg_tablet "CENTER-4:16, SOUTH:5"
 #define ui_inv1 "CENTER-2:16,SOUTH:5"
-#define ui_inv2 "CENTER-1  :16,SOUTH:5"
-#define ui_inv3 "CENTER  :16,SOUTH:5"
+#define ui_inv2 "CENTER-1 :16,SOUTH:5"
+#define ui_inv3 "CENTER :16,SOUTH:5"
 #define ui_borg_module "CENTER+1:16,SOUTH:5"
 #define ui_borg_store "CENTER+2:16,SOUTH:5"
 #define ui_borg_camera "CENTER+3:21,SOUTH:5"
 #define ui_borg_alerts "CENTER+4:21,SOUTH:5"
 #define ui_borg_language_menu "CENTER+4:19,SOUTH+1:6"
 #define ui_borg_navigate_menu "CENTER+4:19,SOUTH+1:6"
+#define ui_borg_floor_menu "CENTER+4:-13,SOUTH+1:6"
 
 //Aliens
 #define ui_alien_health "EAST,CENTER-1:15"
@@ -151,25 +141,31 @@
 #define ui_alien_storage_r "CENTER+1:18,SOUTH:5"
 #define ui_alien_language_menu "EAST-4:20,SOUTH:5"
 #define ui_alien_navigate_menu "EAST-4:20,SOUTH:5"
+#define ui_alien_floor_menu "EAST-4:-12,SOUTH:5"
 
 //AI
-#define ui_ai_core "SOUTH:6,WEST"
-#define ui_ai_camera_list "SOUTH:6,WEST+1"
-#define ui_ai_track_with_camera "SOUTH:6,WEST+2"
-#define ui_ai_camera_light "SOUTH:6,WEST+3"
-#define ui_ai_crew_monitor "SOUTH:6,WEST+4"
-#define ui_ai_crew_manifest "SOUTH:6,WEST+5"
-#define ui_ai_alerts "SOUTH:6,WEST+6"
-#define ui_ai_announcement "SOUTH:6,WEST+7"
-#define ui_ai_shuttle "SOUTH:6,WEST+8"
-#define ui_ai_state_laws "SOUTH:6,WEST+9"
-#define ui_ai_mod_int "SOUTH:6,WEST+10"
-#define ui_ai_take_picture "SOUTH:6,WEST+11"
-#define ui_ai_view_images "SOUTH:6,WEST+12"
-#define ui_ai_sensor "SOUTH:6,WEST+13"
-#define ui_ai_multicam "SOUTH+1:6,WEST+12"
-#define ui_ai_add_multicam "SOUTH+1:6,WEST+13"
-#define ui_ai_language_menu "SOUTH+1:8,WEST+11:30"
+#define ui_ai_core "BOTTOM:6,RIGHT-4"
+#define ui_ai_shuttle "BOTTOM:6,RIGHT-3"
+#define ui_ai_announcement "BOTTOM:6,RIGHT-2"
+#define ui_ai_state_laws "BOTTOM:6,RIGHT-1"
+#define ui_ai_mod_int "BOTTOM:6,RIGHT"
+#define ui_ai_language_menu "BOTTOM+1:8,RIGHT-1:30"
+#define ui_ai_floor_menu "BOTTOM+1:8,RIGHT-1:14"
+
+#define ui_ai_crew_monitor "BOTTOM:6,CENTER-1"
+#define ui_ai_crew_manifest "BOTTOM:6,CENTER"
+#define ui_ai_alerts "BOTTOM:6,CENTER+1"
+
+#define ui_ai_view_images "BOTTOM:6,LEFT+4"
+#define ui_ai_camera_list "BOTTOM:6,LEFT+3"
+#define ui_ai_track_with_camera "BOTTOM:6,LEFT+2"
+#define ui_ai_camera_light "BOTTOM:6,LEFT+1"
+#define ui_ai_sensor "BOTTOM:6,LEFT"
+#define ui_ai_multicam "BOTTOM+1:6,LEFT+1"
+#define ui_ai_add_multicam "BOTTOM+1:6,LEFT"
+#define ui_ai_take_picture "BOTTOM+2:6,LEFT"
+#define ui_ai_floor_indicator "BOTTOM+5,RIGHT"
+#define ui_ai_godownup "BOTTOM+5,RIGHT-1"
 
 //pAI
 #define ui_pai_software "SOUTH:6,WEST"
@@ -197,6 +193,7 @@
 #define ui_ghost_pai "SOUTH: 6, CENTER+1:24"
 #define ui_ghost_minigames "SOUTH: 6, CENTER+2:24"
 #define ui_ghost_language_menu "SOUTH: 22, CENTER+3:8"
+#define ui_ghost_floor_menu "SOUTH: 6, CENTER+3:8"
 
 //Blobbernauts
 #define ui_blobbernaut_overmind_health "EAST-1:28,CENTER+0:19"

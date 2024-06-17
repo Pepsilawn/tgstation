@@ -16,11 +16,8 @@
 //The user can change properties of the supplypod using the UI, and change the way that items are taken from the bay (One at a time, ordered, random, etc)
 //Many of the effects of the supplypod set here are put into action in supplypod.dm
 
-/client/proc/centcom_podlauncher() //Creates a verb for admins to open up the ui
-	set name = "Config/Launch Supplypod"
-	set desc = "Configure and launch a CentCom supplypod full of whatever your heart desires!"
-	set category = "Admin.Events"
-	new /datum/centcom_podlauncher(usr)//create the datum
+ADMIN_VERB(centcom_podlauncher, R_ADMIN, "Config/Launch Supplypod", "Configure and launch a CentCom supplypod full of whatever your heart desires!", ADMIN_CATEGORY_EVENTS)
+	new /datum/centcom_podlauncher(user.mob)
 
 //Variables declared to change how items in the launch bay are picked and launched. (Almost) all of these are changed in the ui_act proc
 //Some effect groups are choices, while other are booleans. This is because some effects can stack, while others dont (ex: you can stack explosion and quiet, but you cant stack ordered launch and random launch)
@@ -34,6 +31,7 @@
 		/obj/effect/particle_effect/sparks,
 		/obj/effect/pod_landingzone,
 		/obj/effect/client_image_holder,
+		/obj/effect/light_emitter/podbay,
 	))
 
 	var/turf/oldTurf //Keeps track of where the user was at if they use the "teleport to centcom" button, so they can go back
@@ -42,7 +40,7 @@
 	var/bayNumber //Quick reference to what bay we're in. Usually set to the loading_id variable for the related area type
 	var/customDropoff = FALSE
 	var/picking_dropoff_turf = FALSE
-	var/launchClone = FALSE //If true, then we don't actually launch the thing in the bay. Instead we call duplicateObject() and send the result
+	var/launchClone = FALSE //If true, then we don't actually launch the thing in the bay. Instead we call duplicate_object() and send the result
 	var/launchRandomItem = FALSE //If true, lauches a single random item instead of everything on a turf.
 	var/launchChoice = LAUNCH_RANDOM //Determines if we launch all at once (0) , in order (1), or at random(2)
 	var/explosionChoice = 0 //Determines if there is no explosion (0), custom explosion (1), or just do a maxcap (2)
@@ -105,7 +103,7 @@
 	var/datum/plane_master_group/planes = cam_screen.display_to(holder.mob)
 
 	if(!renderLighting)
-		for(var/atom/movable/screen/plane_master/instance in holder.mob.hud_used.get_true_plane_masters(LIGHTING_PLANE, planes.key))
+		for(var/atom/movable/screen/plane_master/instance as anything in holder.mob.hud_used.get_true_plane_masters(LIGHTING_PLANE, planes.key))
 			instance.set_alpha(100)
 
 	cam_background = new
@@ -191,13 +189,13 @@
 		////////////////////////////UTILITIES//////////////////
 		if("gamePanel")
 			holder.holder.Game()
-			SSblackbox.record_feedback("tally", "admin_verb", 1, "Game Panel") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
+			BLACKBOX_LOG_ADMIN_VERB("Game Panel")
 			. = TRUE
 		if("buildMode")
 			var/mob/holder_mob = holder.mob
 			if (holder_mob && (holder.holder?.rank_flags() & R_BUILD))
 				togglebuildmode(holder_mob)
-				SSblackbox.record_feedback("tally", "admin_verb", 1, "Toggle Build Mode") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
+				BLACKBOX_LOG_ADMIN_VERB("Toggle Build Mode")
 			. = TRUE
 		if("loadDataFromPreset")
 			var/list/savedData = params["payload"]
@@ -715,13 +713,13 @@
 				launchList |= typecache_filter_list_reverse(acceptable_turf.contents, ignored_atoms) //filter a random turf from the acceptableTurfs list and add it to the launchList
 				if (iswallturf(acceptable_turf))
 					launchList += acceptable_turf
-	updateSelector() //Call updateSelector(), which, if we are launching one at a time (launchChoice==2), will move to the next turf that will be launched
+	updateSelector() //Call updateSelector(), which, if we are launching one at a time (launchChoice == 2), will move to the next turf that will be launched
 	//UpdateSelector() is here (instead if the if(1) switch block) because it also moves the selector to nullspace (to hide it) if needed
 
 /datum/centcom_podlauncher/proc/launch(turf/target_turf) //Game time started
 	if (isnull(target_turf))
 		return
-	var/obj/structure/closet/supplypod/centcompod/toLaunch = DuplicateObject(temp_pod) //Duplicate the temp_pod (which we have been varediting or configuring with the UI) and store the result
+	var/obj/structure/closet/supplypod/centcompod/toLaunch = duplicate_object(temp_pod) //Duplicate the temp_pod (which we have been varediting or configuring with the UI) and store the result
 	toLaunch.update_appearance()//we update_appearance() here so that the door doesnt "flicker on" right after it lands
 	var/shippingLane = GLOB.areas_by_type[/area/centcom/central_command_areas/supplypod/supplypod_temp_holding]
 	toLaunch.forceMove(shippingLane)
@@ -734,7 +732,7 @@
 					toLaunch.turfs_in_cargo += atom_to_launch.type
 				else
 					var/atom/movable/movable_to_launch = launch_candidate
-					DuplicateObject(movable_to_launch).forceMove(toLaunch) //Duplicate a single atom/movable from launchList and forceMove it into the supplypod
+					duplicate_object(movable_to_launch).forceMove(toLaunch) //Duplicate a single atom/movable from launchList and forceMove it into the supplypod
 		else
 			for (var/launch_candidate in launchList)
 				if (isnull(launch_candidate))
@@ -744,7 +742,7 @@
 					toLaunch.turfs_in_cargo += turf_to_launch.type
 				else
 					var/atom/movable/movable_to_launch = launch_candidate
-					DuplicateObject(movable_to_launch).forceMove(toLaunch) //Duplicate each atom/movable in launchList and forceMove them into the supplypod
+					duplicate_object(movable_to_launch).forceMove(toLaunch) //Duplicate each atom/movable in launchList and forceMove them into the supplypod
 	else
 		if(launchRandomItem)
 			var/atom/random_item = pick_n_take(launchList)
@@ -892,3 +890,9 @@ GLOBAL_DATUM_INIT(podlauncher, /datum/centcom_podlauncher, new)
 	layer = FLY_LAYER
 	plane = ABOVE_GAME_PLANE
 	alpha = 0
+
+#undef LAUNCH_ALL
+#undef LAUNCH_ORDERED
+#undef LAUNCH_RANDOM
+#undef TAB_BAY
+#undef TAB_POD

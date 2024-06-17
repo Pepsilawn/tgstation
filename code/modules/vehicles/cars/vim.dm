@@ -9,18 +9,26 @@
 	desc = "An minature exosuit from Nanotrasen, developed to let the irreplacable station pets live a little longer."
 	icon_state = "vim"
 	max_integrity = 50
-	armor = list(MELEE = 70, BULLET = 40, LASER = 40, ENERGY = 0, BOMB = 30, BIO = 0, FIRE = 80, ACID = 80)
+	armor_type = /datum/armor/car_vim
 	enter_delay = 20
 	movedelay = 0.6
 	engine_sound_length = 0.3 SECONDS
-	light_system = MOVABLE_LIGHT_DIRECTIONAL
+	light_system = OVERLAY_LIGHT_DIRECTIONAL
 	light_range = 4
-	light_power = 2
+	light_power = 1.5
 	light_on = FALSE
 	engine_sound = 'sound/effects/servostep.ogg'
 	///Maximum size of a mob trying to enter the mech
 	var/maximum_mob_size = MOB_SIZE_SMALL
 	COOLDOWN_DECLARE(sound_cooldown)
+
+/datum/armor/car_vim
+	melee = 70
+	bullet = 40
+	laser = 40
+	bomb = 30
+	fire = 80
+	acid = 80
 
 /obj/vehicle/sealed/car/vim/Initialize(mapload)
 	. = ..()
@@ -65,7 +73,7 @@
 	audible_message(span_hear("You hear welding."))
 	var/did_the_thing
 	while(atom_integrity < max_integrity)
-		if(W.use_tool(src, user, 2.5 SECONDS, volume=50, amount=1))
+		if(W.use_tool(src, user, 2.5 SECONDS, volume=50))
 			did_the_thing = TRUE
 			atom_integrity += min(VIM_HEAL_AMOUNT, (max_integrity - atom_integrity))
 			audible_message(span_hear("You hear welding."))

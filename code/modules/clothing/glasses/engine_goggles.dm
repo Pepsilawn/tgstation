@@ -21,8 +21,7 @@
 	gender = PLURAL
 
 	vision_flags = NONE
-	darkness_view = 2
-	invis_view = SEE_INVISIBLE_LIVING
+	color_cutoffs = null
 
 	var/list/modes = list(MODE_NONE = MODE_MESON, MODE_MESON = MODE_TRAY, MODE_TRAY = MODE_NONE)
 	var/mode = MODE_NONE
@@ -31,7 +30,7 @@
 
 /obj/item/clothing/glasses/meson/engine/Initialize(mapload)
 	. = ..()
-	AddElement(/datum/element/update_icon_updates_onmob, ITEM_SLOT_EYES)
+	AddElement(/datum/element/update_icon_updates_onmob)
 	START_PROCESSING(SSobj, src)
 	update_appearance()
 
@@ -47,14 +46,12 @@
 	switch(mode)
 		if(MODE_MESON)
 			vision_flags = SEE_TURFS
-			darkness_view = 1
-			lighting_alpha = LIGHTING_PLANE_ALPHA_MOSTLY_VISIBLE
+			color_cutoffs = list(15, 12, 0)
 			change_glass_color(user, /datum/client_colour/glass_colour/yellow)
 
 		if(MODE_TRAY) //undoes the last mode, meson
 			vision_flags = NONE
-			darkness_view = 2
-			lighting_alpha = null
+			color_cutoffs = null
 			change_glass_color(user, /datum/client_colour/glass_colour/lightblue)
 
 		if(MODE_PIPE_CONNECTABLE)
@@ -72,7 +69,7 @@
 			H.update_sight()
 
 	update_appearance()
-	update_action_buttons()
+	update_item_action_buttons()
 
 /obj/item/clothing/glasses/meson/engine/attack_self(mob/user)
 	toggle_mode(user, TRUE)
@@ -100,15 +97,16 @@
 		return
 	var/list/shuttle_areas = port.shuttle_areas
 	for(var/area/region as anything in shuttle_areas)
-		for(var/turf/place as anything in region.get_contained_turfs())
-			if(get_dist(user, place) > 7)
-				continue
-			var/image/pic
-			if(isshuttleturf(place))
-				pic = new('icons/turf/overlays.dmi', place, "greenOverlay", AREA_LAYER)
-			else
-				pic = new('icons/turf/overlays.dmi', place, "redOverlay", AREA_LAYER)
-			flick_overlay(pic, list(user.client), 8)
+		for (var/list/zlevel_turfs as anything in region.get_zlevel_turf_lists())
+			for (var/turf/place as anything in zlevel_turfs)
+				if(get_dist(user, place) > 7)
+					continue
+				var/image/pic
+				if(isshuttleturf(place))
+					pic = new('icons/turf/overlays.dmi', place, "greenOverlay", AREA_LAYER)
+				else
+					pic = new('icons/turf/overlays.dmi', place, "redOverlay", AREA_LAYER)
+				flick_overlay_global(pic, list(user.client), 8)
 
 /obj/item/clothing/glasses/meson/engine/proc/show_connections()
 	var/mob/living/carbon/human/user = loc
@@ -125,14 +123,14 @@
 				continue
 			if(!connection_images[smart][dir2text(direction)])
 				var/image/arrow
-				arrow = new('icons/obj/atmospherics/pipes/simple.dmi', get_turf(smart), "connection_overlay")
+				arrow = new('icons/obj/pipes_n_cables/simple.dmi', get_turf(smart), "connection_overlay")
 				arrow.dir = direction
 				arrow.layer = smart.layer
 				arrow.color = smart.pipe_color
 				PIPING_LAYER_DOUBLE_SHIFT(arrow, smart.piping_layer)
 				connection_images[smart][dir2text(direction)] = arrow
 			if(connection_images.len)
-				flick_overlay(connection_images[smart][dir2text(direction)], list(user.client), 1.5 SECONDS)
+				flick_overlay_global(connection_images[smart][dir2text(direction)], list(user.client), 1.5 SECONDS)
 
 /obj/item/clothing/glasses/meson/engine/update_icon_state()
 	icon_state = inhand_icon_state = "trayson-[mode]"
@@ -204,7 +202,7 @@
 				pic.color = COLOR_RED
 		pic.mouse_opacity = MOUSE_OPACITY_TRANSPARENT
 		pic.alpha = 200
-		flick_overlay(pic, list(viewer.client), duration)
+		flick_overlay_global(pic, list(viewer.client), duration)
 
 
 #undef MODE_NONE

@@ -28,18 +28,6 @@
 			if(user_unbuckle_mob(buckled_mobs[1],user))
 				return TRUE
 
-/atom/movable/attackby(obj/item/attacking_item, mob/user, params)
-	if(!can_buckle || !istype(attacking_item, /obj/item/riding_offhand) || !user.Adjacent(src))
-		return ..()
-
-	var/obj/item/riding_offhand/riding_item = attacking_item
-	var/mob/living/carried_mob = riding_item.rider
-	if(carried_mob == user) //Piggyback user.
-		return
-	user.unbuckle_mob(carried_mob)
-	carried_mob.forceMove(get_turf(src))
-	return mouse_buckle_handling(carried_mob, user)
-
 //literally just the above extension of attack_hand(), but for silicons instead (with an adjacency check, since attack_robot() being called doesn't mean that you're adjacent to something)
 /atom/movable/attack_robot(mob/living/user)
 	. = ..()
@@ -54,8 +42,7 @@
 		else
 			return user_unbuckle_mob(buckled_mobs[1], user)
 
-/atom/movable/MouseDrop_T(mob/living/M, mob/living/user)
-	. = ..()
+/atom/movable/mouse_drop_receive(mob/living/M, mob/user, params)
 	return mouse_buckle_handling(M, user)
 
 /**
@@ -121,9 +108,14 @@
 	M.Move(loc)
 	M.setDir(dir)
 
+	//Something has unbuckled us in reaction to the above movement
+	if(!M.buckled)
+		return FALSE
+
 	post_buckle_mob(M)
 
 	SEND_SIGNAL(src, COMSIG_MOVABLE_BUCKLE, M, force)
+	SEND_SIGNAL(M, COMSIG_MOB_BUCKLED, src)
 	return TRUE
 
 /obj/buckle_mob(mob/living/M, force = FALSE, check_loc = TRUE)
@@ -152,13 +144,14 @@
 	buckled_mob.set_buckled(null)
 	buckled_mob.set_anchored(initial(buckled_mob.anchored))
 	buckled_mob.clear_alert(ALERT_BUCKLED)
-	buckled_mob.set_glide_size(DELAY_TO_GLIDE_SIZE(buckled_mob.total_multiplicative_slowdown()))
+	buckled_mob.set_glide_size(DELAY_TO_GLIDE_SIZE(buckled_mob.cached_multiplicative_slowdown))
 	buckled_mobs -= buckled_mob
 	if(anchored)
 		REMOVE_TRAIT(buckled_mob, TRAIT_NO_FLOATING_ANIM, BUCKLED_TRAIT)
 	if(!length(buckled_mobs))
 		UnregisterSignal(src, COMSIG_MOVABLE_SET_ANCHORED)
 	SEND_SIGNAL(src, COMSIG_MOVABLE_UNBUCKLE, buckled_mob, force)
+	SEND_SIGNAL(buckled_mob, COMSIG_MOB_UNBUCKLED, src)
 
 	if(can_fall)
 		var/turf/location = buckled_mob.loc
@@ -193,10 +186,10 @@
 
 //Handle any extras after buckling
 //Called on buckle_mob()
-/atom/movable/proc/post_buckle_mob(mob/living/M)
+/atom/movable/proc/post_buckle_mob(mob/living/buckled_mob)
 
 //same but for unbuckle
-/atom/movable/proc/post_unbuckle_mob(mob/living/M)
+/atom/movable/proc/post_unbuckle_mob(mob/living/unbuckled_mob)
 
 /**
  * Simple helper proc that runs a suite of checks to test whether it is possible or not to buckle the target mob to src.

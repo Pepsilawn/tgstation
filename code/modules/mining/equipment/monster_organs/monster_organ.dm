@@ -8,21 +8,21 @@
 	desc = "Inject certain types of monster organs with this stabilizer to prevent their rapid decay."
 	w_class = WEIGHT_CLASS_TINY
 
-/obj/item/mining_stabilizer/afterattack(obj/item/organ/target_organ, mob/user, proximity)
-	. = ..()
-	if (!proximity)
-		return
-	var/obj/item/organ/internal/monster_core/target_core = target_organ
-	if (!istype(target_core, /obj/item/organ/internal/monster_core))
+/obj/item/mining_stabilizer/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
+	if(!isorgan(interacting_with))
+		return NONE
+	var/obj/item/organ/internal/monster_core/target_core = interacting_with
+	if (!istype(target_core))
 		balloon_alert(user, "invalid target!")
-		return
+		return ITEM_INTERACT_BLOCKING
 
 	if (!target_core.preserve())
 		balloon_alert(user, "organ decayed!")
-		return
+		return ITEM_INTERACT_BLOCKING
 
 	balloon_alert(user, "organ stabilized")
 	qdel(src)
+	return ITEM_INTERACT_SUCCESS
 
 /**
  * Useful organs which drop as loot from a mining creature.
@@ -39,7 +39,7 @@
 	visual = FALSE
 	item_flags = NOBLUDGEON
 	slot = ORGAN_SLOT_MONSTER_CORE
-	organ_flags = NONE
+	organ_flags = ORGAN_ORGANIC
 	force = 0
 	/// Set to true if this organ has decayed into uselessness.
 	var/inert = FALSE
@@ -62,25 +62,25 @@
 	. = ..()
 	decay_timer = addtimer(CALLBACK(src, PROC_REF(go_inert)), time_to_decay, TIMER_STOPPABLE)
 
-/obj/item/organ/internal/monster_core/Destroy(force, silent)
+/obj/item/organ/internal/monster_core/Destroy(force)
 	deltimer(decay_timer)
 	return ..()
 
-/obj/item/organ/internal/monster_core/Insert(mob/living/carbon/target_carbon, special = 0, drop_if_replaced = TRUE)
+/obj/item/organ/internal/monster_core/Insert(mob/living/carbon/target_carbon, special = FALSE, movement_flags)
 	. = ..()
-	if (!.)
+	if(!.)
 		return
 	if (inert)
-		to_chat(owner, span_notice("[src] breaks down as you try to insert it."))
+		to_chat(target_carbon, span_notice("[src] breaks down as you try to insert it."))
 		qdel(src)
 		return FALSE
 	if (!decay_timer)
 		return TRUE
 	preserve(TRUE)
-	owner.visible_message(span_notice("[src] stabilizes as it's inserted."))
+	target_carbon.visible_message(span_notice("[src] stabilizes as it's inserted."))
 	return TRUE
 
-/obj/item/organ/internal/monster_core/Remove(mob/living/carbon/target_carbon, special = 0)
+/obj/item/organ/internal/monster_core/Remove(mob/living/carbon/target_carbon, special, movement_flags)
 	if (!inert && !special)
 		owner.visible_message(span_notice("[src] rapidly decays as it's removed."))
 		go_inert()
@@ -132,14 +132,12 @@
 	icon_state = initial(icon_state)
 	return ..()
 
-/obj/item/organ/internal/monster_core/afterattack(atom/target, mob/user, proximity_flag)
-	. = ..()
-	if (!proximity_flag)
-		return
-	try_apply(target, user)
+/obj/item/organ/internal/monster_core/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
+	try_apply(interacting_with, user)
+	return ITEM_INTERACT_SUCCESS
 
 /obj/item/organ/internal/monster_core/attack_self(mob/user)
-	if (!user.canUseTopic(src, be_close = TRUE, no_dexterity = FALSE, no_tk = TRUE))
+	if (!user.can_perform_action(src, FORBID_TELEKINESIS_REACH|ALLOW_RESTING))
 		return
 	try_apply(user, user)
 
@@ -179,9 +177,9 @@
  * Utility proc to find the associated monster organ action and trigger it.
  * Call this instead of on_triggered_internal() if the action needs to trigger automatically, or the cooldown won't happen.
  */
-/obj/item/organ/internal/monster_core/proc/trigger_organ_action()
+/obj/item/organ/internal/monster_core/proc/trigger_organ_action(trigger_flags)
 	var/datum/action/cooldown/monster_core_action/action = locate() in actions
-	action?.Trigger()
+	action?.Trigger(trigger_flags = trigger_flags)
 
 /**
  * Called when activated while implanted inside someone.
@@ -197,9 +195,8 @@
  */
 /datum/action/cooldown/monster_core_action
 	check_flags = AB_CHECK_CONSCIOUS
-	icon_icon = 'icons/obj/medical/organs/mining_organs.dmi'
+	button_icon = 'icons/obj/medical/organs/mining_organs.dmi'
 	button_icon_state = "hivelord_core_2"
-	text_cooldown = FALSE //Looks really bad when you have minutes long cooldowns
 
 /datum/action/cooldown/monster_core_action/Activate(trigger_flags)
 	. = ..()

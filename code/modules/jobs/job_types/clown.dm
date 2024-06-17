@@ -6,7 +6,6 @@
 	total_positions = 1
 	spawn_positions = 1
 	supervisors = SUPERVISOR_HOP
-	selection_color = "#bbe291"
 	exp_granted_type = EXP_TYPE_CREW
 	config_tag = "CLOWN"
 
@@ -34,7 +33,9 @@
 
 	family_heirlooms = list(/obj/item/bikehorn/golden)
 	rpg_title = "Jester"
-	job_flags = JOB_ANNOUNCE_ARRIVAL | JOB_CREW_MANIFEST | JOB_EQUIP_RANK | JOB_CREW_MEMBER | JOB_NEW_PLAYER_JOINABLE | JOB_REOPEN_ON_ROUNDSTART_LOSS | JOB_ASSIGN_QUIRKS | JOB_CAN_BE_INTERN
+	job_flags = STATION_JOB_FLAGS
+
+	job_tone = "honk"
 
 
 /datum/job/clown/after_spawn(mob/living/spawned, client/player_client)
@@ -56,8 +57,9 @@
 		/obj/item/reagent_containers/spray/waterflower = 1,
 		/obj/item/food/grown/banana = 1,
 		/obj/item/instrument/bikehorn = 1,
+		/obj/item/storage/box/balloons = 1,
 		)
-	belt = /obj/item/modular_computer/tablet/pda/clown
+	belt = /obj/item/modular_computer/pda/clown
 	ears = /obj/item/radio/headset/headset_srv
 	shoes = /obj/item/clothing/shoes/clown_shoes
 	mask = /obj/item/clothing/mask/gas/clown_hat
@@ -66,10 +68,12 @@
 	backpack = /obj/item/storage/backpack/clown
 	satchel = /obj/item/storage/backpack/clown
 	duffelbag = /obj/item/storage/backpack/duffelbag/clown //strangely has a duffel
+	messenger = /obj/item/storage/backpack/messenger/clown
 
 	box = /obj/item/storage/box/survival/hug
 	chameleon_extras = /obj/item/stamp/clown
 	implants = list(/obj/item/implant/sad_trombone)
+	skillchips = list(/obj/item/skillchip/job/clown)
 
 /datum/outfit/job/clown/mod
 	name = "Clown (MODsuit)"
@@ -100,4 +104,3 @@
 	var/datum/atom_hud/fan = GLOB.huds[DATA_HUD_FAN]
 	fan.show_to(H)
 	H.faction |= FACTION_CLOWN
-

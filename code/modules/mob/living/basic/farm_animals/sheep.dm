@@ -9,8 +9,7 @@
 	mob_biotypes = MOB_ORGANIC | MOB_BEAST
 	speak_emote = list("baas","bleats")
 	speed = 1.1
-	see_in_dark = 6
-	butcher_results = list(/obj/item/food/meat/slab = 3)
+	butcher_results = list(/obj/item/food/meat/slab/grassfed = 3)
 	response_help_continuous = "pets"
 	response_help_simple = "pet"
 	response_disarm_continuous = "gently pushes aside"
@@ -43,6 +42,7 @@
 		item_harvest_time = 5 SECONDS, \
 		item_harvest_sound = 'sound/surgery/scalpel1.ogg', \
 	)
+	AddElement(/datum/element/ai_retaliate)
 	RegisterSignal(src, COMSIG_LIVING_CULT_SACRIFICED, PROC_REF(on_sacrificed))
 
 /mob/living/basic/sheep/update_overlays()
@@ -58,11 +58,11 @@
 
 	if(cult_converted)
 		for(var/mob/living/cultist as anything in invokers)
-			to_chat(cultist, span_cultitalic("[src] has already been sacrificed!"))
+			to_chat(cultist, span_cult_italic("[src] has already been sacrificed!"))
 		return STOP_SACRIFICE
 
 	for(var/mob/living/cultist as anything in invokers)
-		to_chat(cultist, span_cultitalic("This feels a bit too cliché, don't you think?"))
+		to_chat(cultist, span_cult_italic("This feels a bit too cliché, don't you think?"))
 
 	cult_converted = TRUE
 	INVOKE_ASYNC(src, TYPE_PROC_REF(/atom/movable, say), "BAAAAAAAAH!")
@@ -80,9 +80,14 @@
 		update_appearance(UPDATE_ICON)
 
 /datum/ai_controller/basic_controller/sheep
+	blackboard = list(
+		BB_TARGETING_STRATEGY = /datum/targeting_strategy/basic,
+	)
 	ai_traits = STOP_MOVING_WHEN_PULLED
 	ai_movement = /datum/ai_movement/basic_avoidance
 	idle_behavior = /datum/idle_behavior/idle_random_walk
 	planning_subtrees = list(
-		/datum/ai_planning_subtree/random_speech/sheep
+		/datum/ai_planning_subtree/random_speech/sheep,
+		/datum/ai_planning_subtree/find_nearest_thing_which_attacked_me_to_flee,
+		/datum/ai_planning_subtree/flee_target,
 	)

@@ -10,7 +10,7 @@ Basically, the items they pull cannot be pulled (except by the puller)
 	if(!isliving(parent))
 		return COMPONENT_INCOMPATIBLE
 
-/datum/component/strong_pull/Destroy(force, silent)
+/datum/component/strong_pull/Destroy(force)
 	if(strongpulling)
 		lose_strong_grip()
 	return ..()
@@ -37,6 +37,7 @@ Basically, the items they pull cannot be pulled (except by the puller)
 /datum/component/strong_pull/proc/reject_further_pulls(datum/source, mob/living/puller)
 	SIGNAL_HANDLER
 	if(puller != parent) //for increasing grabs, you need to have a valid pull. thus, parent should be able to pull the same object again
+		strongpulling.balloon_alert(puller, "gripped too tightly!")
 		return COMSIG_ATOM_CANT_PULL
 
 /*

@@ -1,23 +1,23 @@
 #define FREQ_LISTENING (1<<0)
 
 /obj/item/radio
-	icon = 'icons/obj/radio.dmi'
+	icon = 'icons/obj/devices/voice.dmi'
 	name = "station bounced radio"
 	icon_state = "walkietalkie"
-	inhand_icon_state = "radio"
+	inhand_icon_state = "walkietalkie"
 	lefthand_file = 'icons/mob/inhands/items/devices_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/items/devices_righthand.dmi'
 	worn_icon_state = "radio"
 	desc = "A basic handheld radio that communicates with local telecommunication networks."
 	dog_fashion = /datum/dog_fashion/back
+	interaction_flags_atom = parent_type::interaction_flags_atom | INTERACT_ATOM_ALLOW_USER_LOCATION | INTERACT_ATOM_IGNORE_MOBILITY
 
-	flags_1 = CONDUCT_1
+	obj_flags = CONDUCTS_ELECTRICITY
 	slot_flags = ITEM_SLOT_BELT
 	throw_speed = 3
 	throw_range = 7
 	w_class = WEIGHT_CLASS_SMALL
-	custom_materials = list(/datum/material/iron=75, /datum/material/glass=25)
-	obj_flags = USES_TGUI
+	custom_materials = list(/datum/material/iron=SMALL_MATERIAL_AMOUNT * 0.75, /datum/material/glass=SMALL_MATERIAL_AMOUNT * 0.25)
 
 	///if FALSE, broadcasting and listening dont matter and this radio shouldnt do anything
 	VAR_PRIVATE/on = TRUE
@@ -74,8 +74,25 @@
 	/// associative list of the encrypted radio channels this radio can listen/broadcast to, of the form: list(channel name = channel frequency)
 	var/list/secure_radio_connections
 
+	/// overlay when speaker is on
+	var/overlay_speaker_idle = "s_idle"
+	/// overlay when receiving a message
+	var/overlay_speaker_active = "s_active"
+
+	/// overlay when mic is on
+	var/overlay_mic_idle = "m_idle"
+	/// overlay when speaking a message (is displayed simultaniously with speaker_active)
+	var/overlay_mic_active = "m_active"
+
+	/// When set to FALSE, will avoid calling update_icon() in set_broadcasting and co.
+	/// Used to save time on updating icon several times over initialization.
+	VAR_PRIVATE/perform_update_icon = TRUE
+
+	/// If TRUE, will set the icon in initializations.
+	VAR_PRIVATE/should_update_icon = FALSE
+
 /obj/item/radio/Initialize(mapload)
-	wires = new /datum/wires/radio(src)
+	set_wires(new /datum/wires/radio(src))
 	secure_radio_connections = list()
 	. = ..()
 
@@ -84,12 +101,26 @@
 	for(var/ch_name in channels)
 		secure_radio_connections[ch_name] = add_radio(src, GLOB.radiochannels[ch_name])
 
+	perform_update_icon = FALSE
 	set_listening(listening)
 	set_broadcasting(broadcasting)
 	set_frequency(sanitize_frequency(frequency, freerange, syndie))
 	set_on(on)
+	perform_update_icon = TRUE
+
+	if (should_update_icon)
+		update_appearance(UPDATE_ICON)
 
 	AddElement(/datum/element/empprotection, EMP_PROTECT_WIRES)
+
+	// No subtypes
+	if(type != /obj/item/radio)
+		return
+	AddComponent(/datum/component/slapcrafting,\
+		slapcraft_recipes = list(/datum/crafting_recipe/improv_explosive)\
+	)
+
+	RegisterSignal(src, COMSIG_HIT_BY_SABOTEUR, PROC_REF(on_saboteur))
 
 /obj/item/radio/Destroy()
 	remove_radio_all(src) //Just to be sure
@@ -97,6 +128,12 @@
 	if(istype(keyslot))
 		QDEL_NULL(keyslot)
 	return ..()
+
+/obj/item/radio/proc/on_saboteur(datum/source, disrupt_duration)
+	SIGNAL_HANDLER
+	if(broadcasting) //no broadcasting but it can still be used to send radio messages.
+		set_broadcasting(FALSE)
+		return COMSIG_SABOTEUR_SUCCESS
 
 /obj/item/radio/proc/set_frequency(new_frequency)
 	SEND_SIGNAL(src, COMSIG_RADIO_NEW_FREQUENCY, args)
@@ -138,7 +175,7 @@
 	for(var/channel_name in channels)
 		add_radio(src, GLOB.radiochannels[channel_name])
 
-	add_radio(src, FREQ_COMMON)
+	add_radio(src, frequency)
 
 /obj/item/radio/proc/make_syndie() // Turns normal radios into Syndicate radios!
 	qdel(keyslot)
@@ -191,6 +228,11 @@
 	else if(!listening)
 		remove_radio_all(src)
 
+	if (perform_update_icon && !isnull(overlay_speaker_idle))
+		update_icon()
+	else if (!perform_update_icon)
+		should_update_icon = TRUE
+
 /**
  * setter for broadcasting that makes us not hearing sensitive if not broadcasting and hearing sensitive if broadcasting
  * hearing sensitive in this case only matters for the purposes of listening for words said in nearby tiles, talking into us directly bypasses hearing
@@ -209,6 +251,11 @@
 	else if(!broadcasting)
 		lose_hearing_sensitivity(INNATE_TRAIT)
 
+	if (perform_update_icon && !isnull(overlay_mic_idle))
+		update_icon()
+	else if (!perform_update_icon)
+		should_update_icon = TRUE
+
 ///setter for the on var that sets both broadcasting and listening to off or whatever they were supposed to be
 /obj/item/radio/proc/set_on(new_on)
 
@@ -223,17 +270,29 @@
 
 /obj/item/radio/talk_into(atom/movable/talking_movable, message, channel, list/spans, datum/language/language, list/message_mods)
 	if(SEND_SIGNAL(talking_movable, COMSIG_MOVABLE_USING_RADIO, src) & COMPONENT_CANNOT_USE_RADIO)
-		return
+		return NONE
 	if(SEND_SIGNAL(src, COMSIG_RADIO_NEW_MESSAGE, talking_movable, message, channel) & COMPONENT_CANNOT_USE_RADIO)
-		return
+		return NONE
 
 	if(!spans)
 		spans = list(talking_movable.speech_span)
 	if(!language)
 		language = talking_movable.get_selected_language()
-	INVOKE_ASYNC(src, PROC_REF(talk_into_impl), talking_movable, message, channel, spans.Copy(), language, message_mods)
+	INVOKE_ASYNC(src, PROC_REF(talk_into_impl), talking_movable, message, channel, LAZYLISTDUPLICATE(spans), language, LAZYLISTDUPLICATE(message_mods))
 	return ITALICS | REDUCE_RANGE
 
+/**
+ * Handles talking into the radio
+ *
+ * Unlike most speech related procs, spans and message_mods are not guaranteed to be lists
+ *
+ * * talking_movable - the atom that is talking
+ * * message - the message to be spoken
+ * * channel - the channel to be spoken on
+ * * spans - the spans to be used, lazylist
+ * * language - the language to be spoken in. (Should) never be null
+ * * message_mods - the message mods to be used, lazylist
+ */
 /obj/item/radio/proc/talk_into_impl(atom/movable/talking_movable, message, channel, list/spans, datum/language/language, list/message_mods)
 	if(!on)
 		return // the device has to be on
@@ -246,6 +305,14 @@
 
 	if(use_command)
 		spans |= SPAN_COMMAND
+
+	var/radio_message = message
+	if(LAZYACCESS(message_mods, WHISPER_MODE))
+		// Radios don't pick up whispers very well
+		radio_message = stars(radio_message)
+		spans |= SPAN_ITALICS
+
+	flick_overlay_view(overlay_mic_active, 5 SECONDS)
 
 	/*
 	Roughly speaking, radios attempt to make a subspace transmission (which
@@ -270,17 +337,14 @@
 		channel = null
 
 	// Nearby active jammers prevent the message from transmitting
-	var/turf/position = get_turf(src)
-	for(var/obj/item/jammer/jammer as anything in GLOB.active_jammers)
-		var/turf/jammer_turf = get_turf(jammer)
-		if(position?.z == jammer_turf.z && (get_dist(position, jammer_turf) <= jammer.range) && !syndie)
-			return
+	if(is_within_radio_jammer_range(src) && !syndie)
+		return
 
 	// Determine the identity information which will be attached to the signal.
 	var/atom/movable/virtualspeaker/speaker = new(null, talking_movable, src)
 
 	// Construct the signal
-	var/datum/signal/subspace/vocal/signal = new(src, freq, speaker, language, message, spans, message_mods)
+	var/datum/signal/subspace/vocal/signal = new(src, freq, speaker, language, radio_message, spans, message_mods)
 
 	// Independent radios, on the CentCom frequency, reach all independent radios
 	if (independent && (freq == FREQ_CENTCOM || freq == FREQ_CTF_RED || freq == FREQ_CTF_BLUE || freq == FREQ_CTF_GREEN || freq == FREQ_CTF_YELLOW))
@@ -299,7 +363,7 @@
 
 	// Non-subspace radios will check in a couple of seconds, and if the signal
 	// was never received, send a mundane broadcast (no headsets).
-	addtimer(CALLBACK(src, PROC_REF(backup_transmission), signal), 20)
+	addtimer(CALLBACK(src, PROC_REF(backup_transmission), signal), 2 SECONDS)
 
 /obj/item/radio/proc/backup_transmission(datum/signal/subspace/vocal/signal)
 	var/turf/T = get_turf(src)
@@ -309,14 +373,21 @@
 	// Okay, the signal was never processed, send a mundane broadcast.
 	signal.data["compression"] = 0
 	signal.transmission_method = TRANSMISSION_RADIO
-	signal.levels = list(T.z)
+	signal.levels = SSmapping.get_connected_levels(T)
 	signal.broadcast()
 
-/obj/item/radio/Hear(message, atom/movable/speaker, message_language, raw_message, radio_freq, list/spans, list/message_mods = list())
+/obj/item/radio/Hear(message, atom/movable/speaker, message_language, raw_message, radio_freq, list/spans, list/message_mods = list(), message_range)
 	. = ..()
-	if(radio_freq || !broadcasting || get_dist(src, speaker) > canhear_range)
+	if(radio_freq || !broadcasting || get_dist(src, speaker) > canhear_range || message_mods[MODE_RELAY])
 		return
-	var/filtered_mods = list()
+	var/list/filtered_mods = list()
+
+	if (message_mods[MODE_SING])
+		filtered_mods[MODE_SING] = message_mods[MODE_SING]
+	if (message_mods[WHISPER_MODE])
+		filtered_mods[WHISPER_MODE] = message_mods[WHISPER_MODE]
+	if (message_mods[SAY_MOD_VERB])
+		filtered_mods[SAY_MOD_VERB] = message_mods[SAY_MOD_VERB]
 	if (message_mods[MODE_CUSTOM_SAY_EMOTE])
 		filtered_mods[MODE_CUSTOM_SAY_EMOTE] = message_mods[MODE_CUSTOM_SAY_EMOTE]
 		filtered_mods[MODE_CUSTOM_SAY_ERASE_INPUT] = message_mods[MODE_CUSTOM_SAY_ERASE_INPUT]
@@ -350,6 +421,10 @@
 			if(GLOB.radiochannels[ch_name] == text2num(input_frequency) || syndie)
 				return TRUE
 	return FALSE
+
+/obj/item/radio/proc/on_receive_message(list/data)
+	SEND_SIGNAL(src, COMSIG_RADIO_RECEIVE_MESSAGE, data)
+	flick_overlay_view(overlay_speaker_active, 5 SECONDS)
 
 /obj/item/radio/ui_state(mob/user)
 	return GLOB.inventory_state
@@ -440,6 +515,15 @@
 	else
 		. += span_notice("It cannot be modified or attached.")
 
+/obj/item/radio/update_overlays()
+	. = ..()
+	if(unscrewed)
+		return
+	if(broadcasting && overlay_mic_idle)
+		. += overlay_mic_idle
+	if(listening && overlay_speaker_idle)
+		. += overlay_speaker_idle
+
 /obj/item/radio/screwdriver_act(mob/living/user, obj/item/tool)
 	add_fingerprint(user)
 	unscrewed = !unscrewed
@@ -459,7 +543,7 @@
 	for (var/ch_name in channels)
 		channels[ch_name] = 0
 	set_on(FALSE)
-	addtimer(CALLBACK(src, PROC_REF(end_emp_effect), curremp), 200)
+	addtimer(CALLBACK(src, PROC_REF(end_emp_effect), curremp), 20 SECONDS)
 
 /obj/item/radio/suicide_act(mob/living/user)
 	user.visible_message(span_suicide("[user] starts bouncing [src] off [user.p_their()] head! It looks like [user.p_theyre()] trying to commit suicide!"))
@@ -482,6 +566,7 @@
 	subspace_transmission = TRUE
 	subspace_switchable = TRUE
 	dog_fashion = null
+	canhear_range = 0
 
 /obj/item/radio/borg/resetChannels()
 	. = ..()
@@ -539,3 +624,5 @@
 /obj/item/radio/off/Initialize(mapload)
 	. = ..()
 	set_listening(FALSE)
+
+#undef FREQ_LISTENING

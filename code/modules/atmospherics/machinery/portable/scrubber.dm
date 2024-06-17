@@ -31,9 +31,9 @@
 		/datum/gas/halon,
 	)
 
-/obj/machinery/portable_atmospherics/scrubber/Destroy()
-	var/turf/T = get_turf(src)
-	T.assume_air(air_contents)
+/obj/machinery/portable_atmospherics/scrubber/on_deconstruction(disassembled)
+	var/turf/local_turf = get_turf(src)
+	local_turf.assume_air(air_contents)
 	return ..()
 
 /obj/machinery/portable_atmospherics/scrubber/update_icon_state()
@@ -140,7 +140,7 @@
 			on = FALSE
 			update_appearance()
 	else if(on && holding)
-		investigate_log("[key_name(user)] started a transfer into [holding].", INVESTIGATE_ATMOS)
+		user.investigate_log("started a transfer into [holding].", INVESTIGATE_ATMOS)
 
 /obj/machinery/portable_atmospherics/scrubber/ui_act(action, params)
 	. = ..()
@@ -166,7 +166,7 @@
 			suppress_reactions = !suppress_reactions
 			SSair.start_processing_machine(src)
 			message_admins("[ADMIN_LOOKUPFLW(usr)] turned [suppress_reactions ? "on" : "off"] the [src] reaction suppression.")
-			investigate_log("[key_name(usr)] turned [suppress_reactions ? "on" : "off"] the [src] reaction suppression.")
+			usr.investigate_log("turned [suppress_reactions ? "on" : "off"] the [src] reaction suppression.")
 			. = TRUE
 	update_appearance()
 
@@ -219,6 +219,5 @@
 	if(default_unfasten_wrench(user, tool))
 		if(!movable)
 			on = FALSE
-		return TOOL_ACT_TOOLTYPE_SUCCESS
+		return ITEM_INTERACT_SUCCESS
 	return FALSE
-

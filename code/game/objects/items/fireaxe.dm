@@ -13,13 +13,13 @@
 	throwforce = 15
 	demolition_mod = 1.25
 	w_class = WEIGHT_CLASS_BULKY
-	flags_1 = CONDUCT_1
+	obj_flags = CONDUCTS_ELECTRICITY
 	slot_flags = ITEM_SLOT_BACK
 	attack_verb_continuous = list("attacks", "chops", "cleaves", "tears", "lacerates", "cuts")
 	attack_verb_simple = list("attack", "chop", "cleave", "tear", "lacerate", "cut")
 	hitsound = 'sound/weapons/bladeslice.ogg'
 	sharpness = SHARP_EDGED
-	armor = list(MELEE = 0, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 0, BIO = 0, FIRE = 100, ACID = 30)
+	armor_type = /datum/armor/item_fireaxe
 	resistance_flags = FIRE_PROOF
 	wound_bonus = -15
 	bare_wound_bonus = 20
@@ -27,6 +27,10 @@
 	var/force_unwielded = 5
 	/// How much damage to do wielded
 	var/force_wielded = 24
+
+/datum/armor/item_fireaxe
+	fire = 100
+	acid = 30
 
 /obj/item/fireaxe/Initialize(mapload)
 	. = ..()
@@ -47,14 +51,13 @@
 	user.visible_message(span_suicide("[user] axes [user.p_them()]self from head to toe! It looks like [user.p_theyre()] trying to commit suicide!"))
 	return BRUTELOSS
 
-/obj/item/fireaxe/afterattack(atom/A, mob/user, proximity)
-	. = ..()
-	if(!proximity)
+/obj/item/fireaxe/afterattack(atom/target, mob/user, click_parameters)
+	if(!HAS_TRAIT(src, TRAIT_WIELDED)) //destroys windows and grilles in one hit
 		return
-	if(HAS_TRAIT(src, TRAIT_WIELDED)) //destroys windows and grilles in one hit
-		if(istype(A, /obj/structure/window) || istype(A, /obj/structure/grille))
-			var/obj/structure/W = A
-			W.atom_destruction("fireaxe")
+	if(target.resistance_flags & INDESTRUCTIBLE)
+		return
+	if(istype(target, /obj/structure/window) || istype(target, /obj/structure/grille))
+		target.atom_destruction("fireaxe")
 
 /*
  * Bone Axe
@@ -80,3 +83,14 @@
 	demolition_mod = 2
 	tool_behaviour = TOOL_CROWBAR
 	toolspeed = 1
+	usesound = 'sound/items/crowbar.ogg'
+
+//boarding axe
+/obj/item/fireaxe/boardingaxe
+	icon_state = "boarding_axe0"
+	base_icon_state = "boarding_axe"
+	name = "boarding axe"
+	desc = "A hulking cleaver that feels like a burden just looking at it. Seems excellent at halving obstacles like windows, airlocks, barricades and people."
+	force_unwielded = 5
+	force_wielded = 30
+	demolition_mod = 3

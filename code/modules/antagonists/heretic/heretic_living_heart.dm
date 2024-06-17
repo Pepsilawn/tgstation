@@ -19,7 +19,7 @@
 	action = new(src)
 	action.Grant(organ_parent.owner)
 
-/datum/component/living_heart/Destroy(force, silent)
+/datum/component/living_heart/Destroy(force)
 	QDEL_NULL(action)
 	return ..()
 
@@ -55,7 +55,7 @@
 /datum/component/living_heart/proc/on_organ_replaced(obj/item/organ/source, obj/item/organ/replacement)
 	SIGNAL_HANDLER
 
-	if(replacement.status != ORGAN_ORGANIC || (replacement.organ_flags & ORGAN_SYNTHETIC))
+	if(IS_ROBOTIC_ORGAN(replacement))
 		qdel(src)
 		return
 
@@ -69,8 +69,8 @@
 	name = "Living Heartbeat"
 	desc = "LMB: Chose one of your sacrifice targets to track. RMB: Repeats last target you chose to track."
 	check_flags = AB_CHECK_CONSCIOUS
-	background_icon_state = "bg_ecult"
-	icon_icon = 'icons/obj/eldritch.dmi'
+	background_icon_state = "bg_heretic"
+	button_icon = 'icons/obj/antags/eldritch.dmi'
 	button_icon_state = "living_heart"
 	cooldown_time = 4 SECONDS
 
@@ -99,7 +99,7 @@
 
 	return TRUE
 
-/datum/action/cooldown/track_target/Trigger(trigger_flags)
+/datum/action/cooldown/track_target/Trigger(trigger_flags, atom/target)
 	right_clicked = !!(trigger_flags & TRIGGER_SECONDARY_ACTION)
 	return ..()
 

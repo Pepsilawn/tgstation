@@ -1,13 +1,7 @@
-/mob/living/silicon/ai/Life(delta_time = SSMOBS_DT, times_fired)
+/mob/living/silicon/ai/Life(seconds_per_tick = SSMOBS_DT, times_fired)
 	if (stat == DEAD)
 		return
 	//Being dead doesn't mean your temperature never changes
-
-	update_gravity(has_gravity())
-
-	handle_status_effects(delta_time, times_fired)
-
-	handle_traits(delta_time, times_fired)
 
 	if(malfhack?.aidisabled)
 		deltimer(malfhacking)
@@ -17,9 +11,6 @@
 
 	if(isturf(loc) && (QDELETED(eyeobj) || !eyeobj.loc))
 		view_core()
-
-	if(machine)
-		machine.check_eye(src)
 
 	// Handle power damage (oxy)
 	if(aiRestorePowerRoutine)
@@ -37,7 +28,7 @@
 	if(!lacks_power())
 		var/area/home = get_area(src)
 		if(home.powered(AREA_USAGE_EQUIP))
-			home.use_power(500 * delta_time, AREA_USAGE_EQUIP)
+			home.apc?.terminal?.use_energy(500 WATTS * seconds_per_tick, channel = AREA_USAGE_EQUIP)
 
 		if(aiRestorePowerRoutine >= POWER_RESTORATION_SEARCH_APC)
 			ai_restore_power()
@@ -58,10 +49,18 @@
 /mob/living/silicon/ai/updatehealth()
 	if(status_flags & GODMODE)
 		return
+
+	var/old_health = health
 	set_health(maxHealth - getOxyLoss() - getToxLoss() - getBruteLoss() - getFireLoss())
+
+	var/old_stat = stat
 	update_stat()
+
 	diag_hud_set_health()
-	disconnect_shell()
+
+	if(old_health > health || old_stat != stat) // only disconnect if we lose health or change stat
+		disconnect_shell()
+	SEND_SIGNAL(src, COMSIG_LIVING_HEALTH_UPDATE)
 
 /mob/living/silicon/ai/update_stat()
 	if(status_flags & GODMODE)
@@ -76,14 +75,10 @@
 
 /mob/living/silicon/ai/update_sight()
 	set_invis_see(initial(see_invisible))
-	set_see_in_dark(initial(see_in_dark))
 	set_sight(initial(sight))
 	if(aiRestorePowerRoutine)
 		clear_sight(SEE_TURFS|SEE_MOBS|SEE_OBJS)
-		set_see_in_dark(0)
 
-	if(see_override)
-		set_invis_see(see_override)
 	return ..()
 
 
@@ -111,7 +106,7 @@
 	var/obj/machinery/power/apc/theAPC = null
 
 	var/PRP //like ERP with the code, at least this stuff is no more 4x sametext
-	for (PRP=1, PRP<=4, PRP++)
+	for (PRP=1, PRP <= 4, PRP++)
 		T = get_turf(src)
 		AIarea = get_area(src)
 		if(AIarea)
@@ -156,14 +151,14 @@
 		else
 			to_chat(src, span_notice("Alert cancelled. Power has been restored without our assistance."))
 		setAiRestorePowerRoutine(POWER_RESTORATION_OFF)
-		set_blindness(0)
+		remove_status_effect(/datum/status_effect/temporary_blindness)
 		apc_override = null
 		update_sight()
 
 /mob/living/silicon/ai/proc/ai_lose_power()
 	disconnect_shell()
 	setAiRestorePowerRoutine(POWER_RESTORATION_START)
-	adjust_blindness(1)
+	adjust_temp_blindness(2 SECONDS)
 	update_sight()
 	to_chat(src, span_alert("You've lost power!"))
-	addtimer(CALLBACK(src, PROC_REF(start_RestorePowerRoutine)), 20)
+	addtimer(CALLBACK(src, PROC_REF(start_RestorePowerRoutine)), 2 SECONDS)

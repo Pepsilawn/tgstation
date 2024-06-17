@@ -6,7 +6,6 @@
 	total_positions = 1
 	spawn_positions = 1
 	supervisors = SUPERVISOR_HOP
-	selection_color = "#bbe291"
 	exp_granted_type = EXP_TYPE_CREW
 	config_tag = "BARTENDER"
 
@@ -30,7 +29,7 @@
 		/obj/item/stack/sheet/mineral/uranium = 10,
 	)
 
-	job_flags = JOB_ANNOUNCE_ARRIVAL | JOB_CREW_MANIFEST | JOB_EQUIP_RANK | JOB_CREW_MEMBER | JOB_NEW_PLAYER_JOINABLE | JOB_REOPEN_ON_ROUNDSTART_LOSS | JOB_ASSIGN_QUIRKS | JOB_CAN_BE_INTERN
+	job_flags = STATION_JOB_FLAGS
 	rpg_title = "Tavernkeeper"
 
 /datum/job/bartender/award_service(client/winner, award)
@@ -49,12 +48,13 @@
 	jobtype = /datum/job/bartender
 
 	id_trim = /datum/id_trim/job/bartender
-	uniform = /obj/item/clothing/under/rank/civilian/bartender
+	neck = /obj/item/clothing/neck/bowtie
+	uniform = /obj/item/clothing/under/costume/buttondown/slacks/service
 	suit = /obj/item/clothing/suit/armor/vest
 	backpack_contents = list(
 		/obj/item/storage/box/beanbag = 1,
 		)
-	belt = /obj/item/modular_computer/tablet/pda/bar
+	belt = /obj/item/modular_computer/pda/bar
 	ears = /obj/item/radio/headset/headset_srv
 	glasses = /obj/item/clothing/glasses/sunglasses/reagent
 	shoes = /obj/item/clothing/shoes/laceup

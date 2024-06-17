@@ -24,25 +24,26 @@
 		//Generate random valid colors for paper and ribbon
 		var/generated_base_color = "#" + random_color()
 		var/generated_ribbon_color = "#" + random_color()
-		var/temp_base_hsv = RGBtoHSV(generated_base_color)
-		var/temp_ribbon_hsv = RGBtoHSV(generated_ribbon_color)
+		var/list/base_hsv = rgb2hsv(generated_base_color)
+		var/list/ribbon_hsv = rgb2hsv(generated_ribbon_color)
 
 		//If colors are too dark, set to original colors
-		if(ReadHSV(temp_base_hsv)[3] < ReadHSV("7F7F7F")[3])
-			generated_base_color = "#00FF00"
-		if(ReadHSV(temp_ribbon_hsv)[3] < ReadHSV("7F7F7F")[3])
-			generated_ribbon_color = "#FF0000"
+		if(base_hsv[3] < 50)
+			generated_base_color = COLOR_VIBRANT_LIME
+		if(ribbon_hsv[3] < 50)
+			generated_ribbon_color = COLOR_RED
 
 		//Set layers to these colors, base then ribbon
 		set_greyscale(colors = list(generated_base_color, generated_ribbon_color))
 
-/obj/item/stack/wrapping_paper/attack_hand_secondary(mob/user, modifiers)
+/obj/item/stack/wrapping_paper/click_alt(mob/user)
 	var/new_base = input(user, "", "Select a base color", color) as color
 	var/new_ribbon = input(user, "", "Select a ribbon color", color) as color
-	if(!user.canUseTopic(src, be_close = TRUE))
-		return
+	if(!new_base || !new_ribbon)
+		return CLICK_ACTION_BLOCKING
+
 	set_greyscale(colors = list(new_base, new_ribbon))
-	return TRUE
+	return CLICK_ACTION_SUCCESS
 
 //preset wrapping paper meant to fill the original color configuration
 /obj/item/stack/wrapping_paper/xmas
@@ -86,7 +87,7 @@
 		parcel.add_fingerprint(user)
 		return OXYLOSS
 	else
-		balloon_alert(user, span_warning("You need more paper!"))
+		balloon_alert(user, "not enough paper!")
 		return SHAME
 
 /obj/item/proc/can_be_package_wrapped() //can the item be wrapped with package wrapper into a delivery package
@@ -101,25 +102,29 @@
 /obj/item/delivery/can_be_package_wrapped()
 	return FALSE
 
-/obj/item/stack/package_wrap/afterattack(obj/target, mob/user, proximity)
-	. = ..()
-	if(!proximity)
-		return
-	if(!istype(target))
-		return
-	if(target.anchored)
-		return
+/obj/item/stack/package_wrap/storage_insert_on_interaction(datum/storage, atom/storage_holder, mob/user)
+	if(isitem(storage_holder))
+		// Don't insert if the target can be wrapped
+		var/obj/item/item = storage_holder
+		return !item.can_be_package_wrapped()
+	return TRUE
 
-	if(isitem(target))
-		var/obj/item/item = target
+/obj/item/stack/package_wrap/interact_with_atom(obj/interacting_with, mob/living/user, list/modifiers)
+	if(!isobj(interacting_with))
+		return NONE
+	if(interacting_with.anchored)
+		return NONE
+
+	if(isitem(interacting_with))
+		var/obj/item/item = interacting_with
 		if(!item.can_be_package_wrapped())
-			balloon_alert(user, "The [target] can not be wrapped!")
-			return
+			balloon_alert(user, "can't be wrapped!")
+			return ITEM_INTERACT_BLOCKING
 		if(user.is_holding(item))
 			if(!user.dropItemToGround(item))
-				return
+				return ITEM_INTERACT_BLOCKING
 		else if(!isturf(item.loc))
-			return
+			return ITEM_INTERACT_BLOCKING
 		if(use(1))
 			var/obj/item/delivery/small/parcel = new(get_turf(item.loc))
 			if(user.Adjacent(item))
@@ -129,19 +134,21 @@
 			item.forceMove(parcel)
 			var/size = round(item.w_class)
 			parcel.name = "[weight_class_to_text(size)] parcel"
-			parcel.w_class = size
+			parcel.update_weight_class(size)
 			size = min(size, 5)
 			parcel.base_icon_state = "deliverypackage[size]"
 			parcel.update_icon()
+		else
+			return ITEM_INTERACT_BLOCKING
 
-	else if(istype(target, /obj/structure/closet))
-		var/obj/structure/closet/closet = target
+	else if(istype(interacting_with, /obj/structure/closet))
+		var/obj/structure/closet/closet = interacting_with
 		if(closet.opened)
-			balloon_alert(user, span_warning("You can not wrap the [target] while it is opened!"))
-			return
+			balloon_alert(user, "can't wrap while open!")
+			return ITEM_INTERACT_BLOCKING
 		if(!closet.delivery_icon) //no delivery icon means unwrappable closet (e.g. body bags)
-			balloon_alert(user, span_warning("You can't wrap this!"))
-			return
+			balloon_alert(user, "can't wrap!")
+			return ITEM_INTERACT_BLOCKING
 		if(use(3))
 			var/obj/item/delivery/big/parcel = new(get_turf(closet.loc))
 			parcel.base_icon_state = closet.delivery_icon
@@ -151,14 +158,14 @@
 			parcel.add_fingerprint(user)
 			closet.add_fingerprint(user)
 		else
-			balloon_alert(user, span_warning("You need more paper!"))
-			return
+			balloon_alert(user, "not enough paper!")
+			return ITEM_INTERACT_BLOCKING
 
-	else if(istype(target,  /obj/machinery/portable_atmospherics))
-		var/obj/machinery/portable_atmospherics/portable_atmospherics = target
+	else if(istype(interacting_with,  /obj/machinery/portable_atmospherics))
+		var/obj/machinery/portable_atmospherics/portable_atmospherics = interacting_with
 		if(portable_atmospherics.anchored)
-			balloon_alert(user, span_warning("You can not wrap the [target] while it is anchored!"))
-			return
+			balloon_alert(user, "can't wrap while anchored!")
+			return ITEM_INTERACT_BLOCKING
 		if(use(3))
 			var/obj/item/delivery/big/parcel = new(get_turf(portable_atmospherics.loc))
 			parcel.base_icon_state = "deliverybox"
@@ -168,15 +175,16 @@
 			parcel.add_fingerprint(user)
 			portable_atmospherics.add_fingerprint(user)
 		else
-			balloon_alert(user, span_warning("You need more paper!"))
-			return
+			balloon_alert(user, "not enough paper!")
+			return ITEM_INTERACT_BLOCKING
 
 	else
-		balloon_alert(user, span_warning("The object you are trying to wrap is unsuitable for the sorting machinery!"))
-		return
+		balloon_alert(user, "can't wrap!")
+		return ITEM_INTERACT_BLOCKING
 
-	user.visible_message(span_notice("[user] wraps [target]."))
-	user.log_message("has used [name] on [key_name(target)]", LOG_ATTACK, color="blue")
+	user.visible_message(span_notice("[user] wraps [interacting_with]."))
+	user.log_message("has used [name] on [key_name(interacting_with)]", LOG_ATTACK, color="blue")
+	return ITEM_INTERACT_SUCCESS
 
 /obj/item/stack/package_wrap/use(used, transfer = FALSE, check = TRUE)
 	var/turf/T = get_turf(src)

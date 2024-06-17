@@ -47,6 +47,7 @@
 					/obj/item/food/spiderleg,
 					/obj/item/food/fishmeat/carp,
 					/obj/item/food/meat/slab/human,
+					/obj/item/food/meat/slab/grassfed,
 				)
 	crate_name = "food crate"
 
@@ -57,22 +58,24 @@
 
 /datum/supply_pack/organic/exoticseeds
 	name = "Exotic Seeds Crate"
-	desc = "Any entrepreneuring botanist's dream. Contains fourteen different seeds, \
+	desc = "Any entrepreneuring botanist's dream. Contains twelve different seeds, \
 		including one replica-pod seed and two mystery seeds!"
 	cost = CARGO_CRATE_VALUE * 3
 	access_view = ACCESS_HYDROPONICS
-	contains = list(/obj/item/seeds/nettle,
-					/obj/item/seeds/replicapod,
-					/obj/item/seeds/plump,
-					/obj/item/seeds/liberty,
-					/obj/item/seeds/amanita,
-					/obj/item/seeds/reishi,
-					/obj/item/seeds/bamboo,
-					/obj/item/seeds/eggplant/eggy,
-					/obj/item/seeds/rainbow_bunch,
-					/obj/item/seeds/shrub,
-					/obj/item/seeds/random = 2,
-				)
+	contains = list(
+		/obj/item/seeds/amanita,
+		/obj/item/seeds/bamboo,
+		/obj/item/seeds/eggplant/eggy,
+		/obj/item/seeds/liberty,
+		/obj/item/seeds/nettle,
+		/obj/item/seeds/plump,
+		/obj/item/seeds/replicapod,
+		/obj/item/seeds/reishi,
+		/obj/item/seeds/rainbow_bunch,
+		/obj/item/seeds/seedling,
+		/obj/item/seeds/shrub,
+		/obj/item/seeds/random = 2,
+	)
 	crate_name = "exotic seeds crate"
 	crate_type = /obj/structure/closet/crate/hydroponics
 
@@ -122,6 +125,7 @@
 	access = ACCESS_THEATRE
 	access_view = ACCESS_THEATRE
 	crate_type = /obj/structure/closet/crate/secure
+	discountable = SUPPLY_PACK_RARE_DISCOUNTABLE
 
 /datum/supply_pack/organic/hydroponics
 	name = "Hydroponics Crate"
@@ -143,37 +147,33 @@
 /datum/supply_pack/organic/hydroponics/hydrotank
 	name = "Hydroponics Backpack Crate"
 	desc = "Bring on the flood with this high-capacity backpack crate. \
-		Contains 500 units of life-giving H2O. Requires hydroponics access to open."
+		Contains 500 units of life-giving H2O."
 	cost = CARGO_CRATE_VALUE * 2
 	access = ACCESS_HYDROPONICS
 	contains = list(/obj/item/watertank)
 	crate_name = "hydroponics backpack crate"
-	crate_type = /obj/structure/closet/crate/secure
+	crate_type = /obj/structure/closet/crate/secure/hydroponics
 
 /datum/supply_pack/organic/pizza
 	name = "Pizza Crate"
 	desc = "Why visit the kitchen when you can have five random pizzas in a fraction of the time? \
 			Best prices this side of the galaxy! All deliveries are guaranteed to be 99% anomaly-free."
 	cost = CARGO_CRATE_VALUE * 10 // Best prices this side of the galaxy.
-	contains = list(/obj/item/pizzabox/margherita,
-					/obj/item/pizzabox/mushroom,
-					/obj/item/pizzabox/meat,
-					/obj/item/pizzabox/vegetable,
-					/obj/item/pizzabox/pineapple,
-				)
+	contains = list()
 	crate_name = "pizza crate"
+
 	///Whether we've provided an infinite pizza box already this shift or not.
-	var/static/anomalous_box_provided = FALSE
-	///The percentage chance (per pizza) of this supply pack to spawn an anomalous pizza box.
-	var/anna_molly_box_chance = 1
-	///Total tickets in our figurative lottery (per pizza) to decide if we create a bomb box, and if so what type. 1 to 3 create a bomb. The rest do nothing.
-	var/boombox_tickets = 100
+	var/anomalous_box_provided = FALSE
+	/// one percent chance for a pizza box to be the ininfite pizza box
+	var/infinite_pizza_chance = 1
 	///Whether we've provided a bomb pizza box already this shift or not.
 	var/boombox_provided = FALSE
+	/// three percent chance for a pizza box to be the pizza bomb box
+	var/bomb_pizza_chance = 3
+	/// 1 in 3 pizza bombs spawned will be a dud
+	var/bomb_dud_chance = 33
 
-/datum/supply_pack/organic/pizza/fill(obj/structure/closet/crate/C)
-	. = ..()
-
+	/// list of pizza that can randomly go inside of a crate, weighted by how disruptive it would be
 	var/list/pizza_types = list(
 		/obj/item/food/pizza/margherita = 10,
 		/obj/item/food/pizza/meat = 10,
@@ -185,52 +185,58 @@
 		/obj/item/food/pizza/pineapple = 10,
 		/obj/item/food/pizza/arnold = 3,
 		/obj/item/food/pizza/energy = 5
-	) //weighted by chance to disrupt eaters' rounds
+	)
 
-	for(var/obj/item/pizzabox/P in C)
-		if(!anomalous_box_provided)
-			if(prob(anna_molly_box_chance)) //1% chance for each box, so 4% total chance per order
-				var/obj/item/pizzabox/infinite/fourfiveeight = new(C)
-				fourfiveeight.boxtag = P.boxtag
-				fourfiveeight.boxtag_set = TRUE
-				fourfiveeight.update_appearance()
-				qdel(P)
-				anomalous_box_provided = TRUE
-				log_game("An anomalous pizza box was provided in a pizza crate at during cargo delivery.")
-				if(prob(50))
-					addtimer(CALLBACK(src, PROC_REF(anomalous_pizza_report)), rand(300, 1800))
-					message_admins("An anomalous pizza box was provided in a pizza crate at during cargo delivery.")
-				else
-					message_admins("An anomalous pizza box was silently created with no command report in a pizza crate delivery.")
-				continue
+/datum/supply_pack/organic/pizza/fill(obj/structure/closet/crate/new_crate)
+	. = ..()
+	var/list/rng_pizza_list = pizza_types.Copy()
+	for(var/i in 1 to 5)
+		if(add_anomalous(new_crate))
+			continue
+		if(add_boombox(new_crate))
+			continue
+		add_normal_pizza(new_crate, rng_pizza_list)
 
-		if(!boombox_provided)
-			var/boombox_lottery = rand(1,boombox_tickets)
-			var/boombox_type
-			switch(boombox_lottery)
-				if(1 to 2)
-					boombox_type = /obj/item/pizzabox/bomb/armed //explodes after opening
-				if(3)
-					boombox_type = /obj/item/pizzabox/bomb //free bomb
+/// adds the chance for an infinite pizza box
+/datum/supply_pack/organic/pizza/proc/add_anomalous(obj/structure/closet/crate/new_crate)
+	if(anomalous_box_provided)
+		return FALSE
+	if(!prob(infinite_pizza_chance))
+		return FALSE
+	new /obj/item/pizzabox/infinite(new_crate)
+	anomalous_box_provided = TRUE
+	log_game("An anomalous pizza box was provided in a pizza crate at during cargo delivery.")
+	if(prob(50))
+		addtimer(CALLBACK(src, PROC_REF(anomalous_pizza_report)), rand(30 SECONDS, 180 SECONDS))
+		message_admins("An anomalous pizza box was provided in a pizza crate at during cargo delivery.")
+	else
+		message_admins("An anomalous pizza box was silently created with no command report in a pizza crate delivery.")
+	return TRUE
 
-			if(boombox_type)
-				new boombox_type(C)
-				qdel(P)
-				boombox_provided = TRUE
-				log_game("A pizza box bomb was created by a pizza crate delivery.")
-				message_admins("A pizza box bomb has arrived in a pizza crate delivery.")
-				continue
+/// adds a chance of a pizza bomb replacing a pizza
+/datum/supply_pack/organic/pizza/proc/add_boombox(obj/structure/closet/crate/new_crate)
+	if(boombox_provided)
+		return FALSE
+	if(!prob(bomb_pizza_chance))
+		return FALSE
+	var/boombox_type = (prob(bomb_dud_chance)) ? /obj/item/pizzabox/bomb : /obj/item/pizzabox/bomb/armed
+	new boombox_type(new_crate)
+	boombox_provided = TRUE
+	log_game("A pizza box bomb was created by a pizza crate delivery.")
+	message_admins("A pizza box bomb has arrived in a pizza crate delivery.")
+	return TRUE
 
-		//here we randomly replace our pizzas for a chance at the full range
-		var/obj/item/food/pizza/replacement_type = pick_weight(pizza_types)
-		pizza_types -= replacement_type
-		if(replacement_type && !istype(P.pizza, replacement_type))
-			QDEL_NULL(P.pizza)
-			P.pizza = new replacement_type
-			P.boxtag = P.pizza.boxtag
-			P.boxtag_set = TRUE
-			P.update_appearance()
+/// adds a randomized pizza from the pizza list
+/datum/supply_pack/organic/pizza/proc/add_normal_pizza(obj/structure/closet/crate/new_crate, list/rng_pizza_list)
+	var/randomize_pizza = pick_weight(rng_pizza_list)
+	rng_pizza_list -= randomize_pizza
+	var/obj/item/pizzabox/new_pizza_box = new(new_crate)
+	new_pizza_box.pizza = new randomize_pizza
+	new_pizza_box.boxtag = new_pizza_box.pizza.boxtag
+	new_pizza_box.boxtag_set = TRUE
+	new_pizza_box.update_appearance(UPDATE_ICON | UPDATE_DESC)
 
+/// tells crew that an infinite pizza box exists, half of the time, based on a roll in the anamolous box proc
 /datum/supply_pack/organic/pizza/proc/anomalous_pizza_report()
 	print_command_report("[station_name()], our anomalous materials divison has reported a missing object that is highly likely to have been sent to your station during a routine cargo \
 	delivery. Please search all crates and manifests provided with the delivery and return the object if is located. The object resembles a standard <b>\[DATA EXPUNGED\]</b> and is to be \
@@ -292,13 +298,16 @@
 	name = "Grilling Starter Kit"
 	desc = "Hey dad I'm Hungry. Hi Hungry I'm THE NEW GRILLING STARTER KIT \
 		ONLY 5000 BUX GET NOW! Contains a grill and fuel."
-	cost = CARGO_CRATE_VALUE * 8
+	cost = CARGO_CRATE_VALUE * 4
 	crate_type = /obj/structure/closet/crate
-	contains = list(/obj/item/stack/sheet/mineral/coal/five,
-					/obj/machinery/grill/unwrenched,
-					/obj/item/reagent_containers/cup/soda_cans/monkey_energy,
-				)
+	contains = list(
+		/obj/item/stack/sheet/mineral/coal/five,
+		/obj/item/kitchen/tongs,
+		/obj/item/reagent_containers/cup/soda_cans/monkey_energy,
+		/obj/machinery/grill/unwrenched,
+	)
 	crate_name = "grilling starter kit crate"
+	discountable = SUPPLY_PACK_UNCOMMON_DISCOUNTABLE
 
 /datum/supply_pack/organic/grillfuel
 	name = "Grilling Fuel Kit"
@@ -310,6 +319,7 @@
 					/obj/item/reagent_containers/cup/soda_cans/monkey_energy,
 				)
 	crate_name = "grilling fuel kit crate"
+	discountable = SUPPLY_PACK_UNCOMMON_DISCOUNTABLE
 
 /datum/supply_pack/organic/tiziran_supply
 	name = "Tiziran Supply Box"
@@ -334,3 +344,27 @@
 				)
 	crate_name = "\improper Mothic Supply box"
 	crate_type = /obj/structure/closet/crate/cardboard/mothic
+
+/datum/supply_pack/organic/syrup
+	name = "Coffee Syrups Box"
+	desc = "A packaged box of various syrups, perfect for making your delicious coffee even more diabetic."
+	cost = CARGO_CRATE_VALUE * 4
+	contains = list(
+		/obj/item/reagent_containers/cup/bottle/syrup_bottle/caramel,
+		/obj/item/reagent_containers/cup/bottle/syrup_bottle/liqueur,
+		/obj/item/reagent_containers/cup/bottle/syrup_bottle/korta_nectar,
+	)
+	crate_name = "coffee syrups box"
+	crate_type = /obj/structure/closet/crate/cardboard
+
+/datum/supply_pack/organic/syrup_contraband
+	contraband = TRUE
+	name = "Contraband Syrups Box"
+	desc = "A packaged box containing illegal coffee syrups. Possession of these carries a penalty established in the galactic penal code."
+	cost = CARGO_CRATE_VALUE * 6
+	contains = list(
+		/obj/item/reagent_containers/cup/bottle/syrup_bottle/laughsyrup,
+		/obj/item/reagent_containers/cup/bottle/syrup_bottle/laughsyrup,
+	)
+	crate_name = "illegal syrups box"
+	crate_type = /obj/structure/closet/crate/cardboard

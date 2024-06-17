@@ -51,14 +51,14 @@
 		var/obj/item/tank/tank_item = item
 		if(inserted_tank)
 			if(!eject_tank(user))
-				balloon_alert(user, span_warning("[inserted_tank] is stuck inside."))
+				balloon_alert(user, "it's stuck inside!")
 				return ..()
 		if(!user.transferItemToLoc(tank_item, src))
-			balloon_alert(user, span_warning("[tank_item] is stuck to your hand."))
+			balloon_alert(user, "it's stuck to your hand!")
 			return ..()
 		inserted_tank = tank_item
 		last_recorded_pressure = 0
-		RegisterSignal(inserted_tank, COMSIG_PARENT_QDELETING, PROC_REF(tank_destruction))
+		RegisterSignal(inserted_tank, COMSIG_QDELETING, PROC_REF(tank_destruction))
 		update_appearance()
 		return
 	if(istype(item, /obj/item/computer_disk))
@@ -67,7 +67,7 @@
 		if(user.transferItemToLoc(attacking_disk, src))
 			inserted_disk = attacking_disk
 		else
-			balloon_alert(user, span_warning("[attacking_disk] is stuck to your hand."))
+			balloon_alert(user, "it's stuck to your hand!")
 		return
 	return ..()
 
@@ -84,9 +84,6 @@
 	set_init_directions()
 	update_appearance()
 	return TRUE
-
-/obj/machinery/atmospherics/components/binary/circulator/get_node_connects()
-	return list(turn(dir, 180), dir) // airs[2] is input which is facing dir, airs[1] is output which is facing the other side of dir
 
 /obj/machinery/atmospherics/components/binary/tank_compressor/screwdriver_act(mob/living/user, obj/item/tool)
 	if(active || inserted_tank)
@@ -236,12 +233,12 @@
 	if(gone == inserted_disk)
 		inserted_disk = null
 	if(gone == inserted_tank)
-		UnregisterSignal(inserted_tank, COMSIG_PARENT_QDELETING)
+		UnregisterSignal(inserted_tank, COMSIG_QDELETING)
 		inserted_tank = null
 		update_appearance()
 	return ..()
 
-/obj/machinery/atmospherics/components/binary/tank_compressor/on_deconstruction()
+/obj/machinery/atmospherics/components/binary/tank_compressor/on_deconstruction(disassembled)
 	eject_tank()
 	eject_disk()
 	return ..()
@@ -263,7 +260,7 @@
 /obj/machinery/atmospherics/components/binary/tank_compressor/update_overlays()
 	. = ..()
 	. += get_pipe_image(icon, "[base_icon_state]-pipe", dir, COLOR_VIBRANT_LIME, piping_layer)
-	. += get_pipe_image(icon, "[base_icon_state]-pipe", turn(dir, 180), COLOR_RED, piping_layer)
+	. += get_pipe_image(icon, "[base_icon_state]-pipe", REVERSE_DIR(dir), COLOR_RED, piping_layer)
 	if(!istype(inserted_tank))
 		. += mutable_appearance(icon, "[base_icon_state]-doors",)
 	if(panel_open)
@@ -298,7 +295,7 @@
 			compressor_record -= record
 			return TRUE
 		if("save_record")
-			var/datum/data/compressor_record/record  = locate(params["ref"]) in compressor_record
+			var/datum/data/compressor_record/record = locate(params["ref"]) in compressor_record
 			if(!compressor_record || !(record in compressor_record))
 				return
 			print(usr, record)
@@ -344,3 +341,7 @@
 			single_record_data["gases"] += list(initial(gas_path.name) = record.gas_data[gas_path])
 		data["records"] += list(single_record_data)
 	return data
+
+#undef TANK_COMPRESSOR_PRESSURE_LIMIT
+#undef TANK_COMPRESSOR_MAX_TRANSFER_RATE
+#undef SIGNIFICANT_AMOUNT_OF_MOLES

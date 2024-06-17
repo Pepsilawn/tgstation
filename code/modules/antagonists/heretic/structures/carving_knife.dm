@@ -3,9 +3,9 @@
 	name = "carving knife"
 	desc = "A small knife made of cold steel, pure and perfect. Its sharpness can carve into titanium itself - \
 		but only few can evoke the dangers that lurk beneath reality."
-	icon = 'icons/obj/eldritch.dmi'
+	icon = 'icons/obj/antags/eldritch.dmi'
 	icon_state = "rune_carver"
-	flags_1 = CONDUCT_1
+	obj_flags = CONDUCTS_ELECTRICITY
 	sharpness = SHARP_EDGED
 	w_class = WEIGHT_CLASS_SMALL
 	wound_bonus = 20
@@ -45,21 +45,14 @@
 		var/potion_string = span_info("\tThe " + initial(trap.name) + " - " + initial(trap.carver_tip))
 		. += potion_string
 
-/obj/item/melee/rune_carver/afterattack(atom/target, mob/user, proximity_flag, click_parameters)
-	. = ..()
-	if(!proximity_flag)
-		return
-
+/obj/item/melee/rune_carver/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
 	if(!IS_HERETIC_OR_MONSTER(user))
-		return
+		return NONE
+	if(!isopenturf(interacting_with) || is_type_in_typecache(interacting_with, blacklisted_turfs))
+		return NONE
 
-	if(!isopenturf(target))
-		return
-
-	if(is_type_in_typecache(target, blacklisted_turfs))
-		return
-
-	INVOKE_ASYNC(src, PROC_REF(try_carve_rune), target, user)
+	INVOKE_ASYNC(src, PROC_REF(try_carve_rune), interacting_with, user)
+	return ITEM_INTERACT_SUCCESS
 
 /*
  * Begin trying to carve a rune. Go through a few checks, then call do_carve_rune if successful.
@@ -126,9 +119,10 @@
 /datum/action/item_action/rune_shatter
 	name = "Rune Break"
 	desc = "Destroys all runes carved by this blade."
-	background_icon_state = "bg_ecult"
+	background_icon_state = "bg_heretic"
+	overlay_icon_state = "bg_heretic_border"
 	button_icon_state = "rune_break"
-	icon_icon = 'icons/mob/actions/actions_ecult.dmi'
+	button_icon = 'icons/mob/actions/actions_ecult.dmi'
 
 /datum/action/item_action/rune_shatter/New(Target)
 	. = ..()
@@ -167,7 +161,7 @@
 /obj/structure/trap/eldritch
 	name = "elder carving"
 	desc = "Collection of unknown symbols, they remind you of days long gone..."
-	icon = 'icons/obj/eldritch.dmi'
+	icon = 'icons/obj/service/hand_of_god_structures.dmi'
 	/// A tip displayed to heretics who examine the rune carver. Explains what the rune does.
 	var/carver_tip
 	/// Reference to trap owner mob
@@ -243,6 +237,6 @@
 	carbon_victim.adjust_confusion(5 SECONDS)
 	carbon_victim.set_jitter_if_lower(20 SECONDS)
 	carbon_victim.set_dizzy_if_lower(40 SECONDS)
-	carbon_victim.adjust_blindness(2)
+	carbon_victim.adjust_temp_blindness(4 SECONDS)
 	carbon_victim.add_mood_event("gates_of_mansus", /datum/mood_event/gates_of_mansus)
 	playsound(src, 'sound/magic/blind.ogg', 75, TRUE)

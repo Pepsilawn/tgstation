@@ -6,15 +6,15 @@
 		return
 	var/data = "<b>Bombing List</b><hr>"
 	for(var/entry in GLOB.bombers)
-		data += text("[entry]<br>")
+		data += "[entry]<br>"
 	usr << browse(data, "window=bombers;size=800x500")
 
 /datum/admins/proc/list_signalers()
 	if(!SSticker.HasRoundStarted())
 		tgui_alert(usr, "The game hasn't started yet!")
 		return
-	var/data = "<b>Showing last [length(GLOB.lastsignalers)] signalers.</b><hr>"
-	for(var/entry in GLOB.lastsignalers)
+	var/data = "<b>Showing last [length(GLOB.investigate_signaler)] signalers.</b><hr>"
+	for(var/entry in GLOB.investigate_signaler)
 		data += "[entry]<BR>"
 	usr << browse(data, "window=lastsignalers;size=800x500")
 
@@ -51,12 +51,7 @@
 	if(!SSticker.HasRoundStarted())
 		tgui_alert(usr, "The game hasn't started yet!")
 		return
-	var/data = "<b>Showing Crew Manifest.</b><hr>"
-	data += "<table cellspacing=5 border=1><tr><th>Name</th><th>Position</th></tr>"
-	for(var/datum/data/record/entry in GLOB.data_core.general)
-		data += "<tr><td>[entry.fields["name"]]</td><td>[entry.fields["rank"]][entry.fields["rank"] != entry.fields["trim"] ? " ([entry.fields["trim"]])" : ""]</td></tr>"
-	data += "</table>"
-	usr << browse(data, "window=manifest;size=440x410")
+	GLOB.manifest.ui_interact(usr)
 
 /datum/admins/proc/output_ai_laws()
 	var/law_bound_entities = 0

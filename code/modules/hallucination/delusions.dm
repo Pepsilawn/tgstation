@@ -18,6 +18,13 @@
 	var/delusion_icon_file
 	/// The icon state of the delusion image
 	var/delusion_icon_state
+
+	/// Do we use an appearance/generated icon? If yes no icon file or state needed.
+	var/dynamic_delusion = FALSE
+	/// Appearance to use as a source for our image
+	/// If this exists we'll ignore the icon/state from above
+	var/mutable_appearance/delusion_appearance
+
 	/// The name of the delusion image
 	var/delusion_name
 
@@ -54,7 +61,7 @@
 	return ..()
 
 /datum/hallucination/delusion/start()
-	if(!hallucinator.client || !delusion_icon_file)
+	if(!hallucinator.client)
 		return FALSE
 
 	feedback_details += "Delusion: [delusion_name]"
@@ -94,7 +101,11 @@
 	return TRUE
 
 /datum/hallucination/delusion/proc/make_delusion_image(mob/over_who)
-	var/image/funny_image = image(delusion_icon_file, over_who, delusion_icon_state)
+	var/image/funny_image
+	if(delusion_appearance)
+		funny_image = image(delusion_appearance, over_who)
+	else
+		funny_image = image(delusion_icon_file, over_who, delusion_icon_state)
 	funny_image.name = delusion_name
 	funny_image.override = TRUE
 	return funny_image
@@ -139,7 +150,7 @@
 	delusion_name = "???"
 
 /datum/hallucination/delusion/preset/monkey
-	delusion_icon_file = 'icons/mob/species/human/human.dmi'
+	delusion_icon_file = 'icons/mob/human/human.dmi'
 	delusion_icon_state = "monkey"
 	delusion_name = "monkey"
 
@@ -158,18 +169,18 @@
 	delusion_name = "carp"
 
 /datum/hallucination/delusion/preset/skeleton
-	delusion_icon_file = 'icons/mob/species/human/human.dmi'
+	delusion_icon_file = 'icons/mob/human/human.dmi'
 	delusion_icon_state = "skeleton"
 	delusion_name = "skeleton"
 
 /datum/hallucination/delusion/preset/zombie
-	delusion_icon_file = 'icons/mob/species/human/human.dmi'
+	delusion_icon_file = 'icons/mob/human/human.dmi'
 	delusion_icon_state = "zombie"
 	delusion_name = "zombie"
 
 /datum/hallucination/delusion/preset/demon
-	delusion_icon_file = 'icons/mob/simple/mob.dmi'
-	delusion_icon_state = "daemon"
+	delusion_icon_file = 'icons/mob/simple/demon.dmi'
+	delusion_icon_state = "slaughter_demon"
 	delusion_name = "demon"
 
 /datum/hallucination/delusion/preset/cyborg
@@ -195,28 +206,66 @@
 	return funny_image
 
 /datum/hallucination/delusion/preset/syndies
+	dynamic_delusion = TRUE
 	random_hallucination_weight = 1
-	delusion_icon_file = 'icons/mob/simple/simple_human.dmi'
-	delusion_icon_state = "syndicate_space"
 	delusion_name = "Syndicate"
 	affects_others = TRUE
 	affects_us = FALSE
 
 /datum/hallucination/delusion/preset/syndies/make_delusion_image(mob/over_who)
-	var/static/list/syndicate_icon_states
-
-	if(!syndicate_icon_states)
-		syndicate_icon_states = list()
-		for(var/state in icon_states(delusion_icon_file))
-			if(!findtext(state, "syndicate"))
-				continue
-
-			syndicate_icon_states += state
-
-	if(length(syndicate_icon_states) > 0)
-		delusion_name = over_who.name
-		delusion_icon_state = pick(syndicate_icon_states)
-	else
-		stack_trace("Hey! The hallucination [type] couldn't find a single icon state to use, it'll be invisible. Correct this.")
+	delusion_appearance = get_dynamic_human_appearance(
+		mob_spawn_path = pick(
+			/obj/effect/mob_spawn/corpse/human/syndicatesoldier,
+			/obj/effect/mob_spawn/corpse/human/syndicatecommando,
+			/obj/effect/mob_spawn/corpse/human/syndicatestormtrooper,
+		),
+		r_hand = pick(
+			/obj/item/knife/combat/survival,
+			/obj/item/melee/energy/sword/saber,
+			/obj/item/gun/ballistic/automatic/pistol,
+			/obj/item/gun/ballistic/automatic/c20r,
+			/obj/item/gun/ballistic/shotgun/bulldog,
+		),
+	)
 
 	return ..()
+
+/// Hallucination used by the nightmare vision goggles to turn everyone except you into mares
+/datum/hallucination/delusion/preset/mare
+	delusion_icon_file = 'icons/obj/clothing/masks.dmi'
+	delusion_icon_state = "horsehead"
+	delusion_name = "mare"
+	affects_us = FALSE
+	affects_others = TRUE
+	random_hallucination_weight = 0
+
+/// Hallucination used by the path of moon heretic to turn everyone into a lunar mass
+/datum/hallucination/delusion/preset/moon
+	delusion_icon_file = 'icons/mob/nonhuman-player/eldritch_mobs.dmi'
+	delusion_icon_state = "moon_mass"
+	delusion_name = "moon"
+	duration = 15 SECONDS
+	affects_others = TRUE
+	random_hallucination_weight = 0
+
+// Hallucination used by heretic paintings
+/datum/hallucination/delusion/preset/heretic
+	dynamic_delusion = TRUE
+	random_hallucination_weight = 0
+	delusion_name = "Heretic"
+	affects_others = TRUE
+	affects_us = FALSE
+	duration = 11 SECONDS
+
+/datum/hallucination/delusion/preset/heretic/make_delusion_image(mob/over_who)
+	// This code is dummy hot for DUMB reasons so let's not make a mob constantly yeah?
+	var/static/mutable_appearance/heretic_appearance
+	if(isnull(heretic_appearance))
+		heretic_appearance = get_dynamic_human_appearance(/datum/outfit/heretic, r_hand = NO_REPLACE)
+	delusion_appearance = heretic_appearance
+	return ..()
+
+/datum/hallucination/delusion/preset/heretic/gate
+	delusion_name = "Mind Gate"
+	duration = 60 SECONDS
+	affects_us = TRUE

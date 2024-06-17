@@ -6,7 +6,7 @@
  */
 /datum/element/pet_bonus
 	element_flags = ELEMENT_BESPOKE
-	id_arg_index = 2
+	argument_hash_start_idx = 2
 
 	///optional cute message to send when you pet your pet!
 	var/emote_message
@@ -33,6 +33,7 @@
 		return
 
 	new /obj/effect/temp_visual/heart(pet.loc)
+	SEND_SIGNAL(pet, COMSIG_ANIMAL_PET, petter, modifiers)
 	if(emote_message && prob(33))
 		pet.manual_emote(emote_message)
 	petter.add_mood_event("petting_bonus", moodlet, pet)

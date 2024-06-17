@@ -1,7 +1,7 @@
-#define MAX_TIMER 15 MINUTES
-#define PRESET_SHORT 2 MINUTES
-#define PRESET_MEDIUM 3 MINUTES
-#define PRESET_LONG 5 MINUTES
+#define MAX_TIMER (15 MINUTES)
+#define PRESET_SHORT (2 MINUTES)
+#define PRESET_MEDIUM (3 MINUTES)
+#define PRESET_LONG (5 MINUTES)
 
 /**
  * Brig Door control displays.
@@ -17,12 +17,14 @@
 	text_color = "#F44"
 	header_text_color = "#F88"
 
-	var/id = null // id of linked machinery/lockers
-
+	/// ID of linked machinery/lockers.
+	var/id = null
+	/// The time at which the timer started.
 	var/activation_time = 0
+	/// The time offset from the activation time before releasing.
 	var/timer_duration = 0
-
-	var/timing = FALSE // boolean, true/1 timer is on, false/0 means it's not timing
+	/// Is the timer on?
+	var/timing = FALSE
 	///List of weakrefs to nearby doors
 	var/list/doors = list()
 	///List of weakrefs to nearby flashers
@@ -43,6 +45,10 @@
 			if (M.id == id)
 				doors += WEAKREF(M)
 
+		for(var/obj/machinery/door/airlock/security/M in urange(20, src))
+			if (M.id == id)
+				doors += WEAKREF(M)
+
 		for(var/obj/machinery/flasher/F in urange(20, src))
 			if(F.id == id)
 				flashers += WEAKREF(F)
@@ -53,6 +59,8 @@
 
 	if(!length(doors) && !length(flashers) && length(closets))
 		atom_break()
+
+	RegisterSignal(SSdcs, COMSIG_GLOB_GREY_TIDE, PROC_REF(grey_tide))
 
 //Main door timer loop, if it's timing and time is >0 reduce time by 1.
 // if it's less than 0, open door, reset timer
@@ -132,7 +140,7 @@
 		sec_radio.talk_into(src, "Timer has expired. Releasing prisoner.", FREQ_SECURITY)
 
 	timing = FALSE
-	activation_time = null
+	activation_time = 0
 	set_timer(0)
 	end_processing()
 
@@ -162,12 +170,12 @@
 /**
  * Return time left.
  * Arguments:
- * * seconds - return time in seconds it TRUE, else deciseconds.
+ * * seconds - Return the time in seconds if TRUE, else deciseconds.
  */
 /obj/machinery/status_display/door_timer/proc/time_left(seconds = FALSE)
-	. = max(0, timer_duration - (activation_time ? world.time - activation_time : 0))
+	. = max(0, timer_duration + activation_time - world.time)
 	if(seconds)
-		. /= 10
+		. /= (1 SECONDS)
 
 /**
  * Set the timer. Does NOT automatically start counting down, but does update the display.
@@ -178,7 +186,7 @@
  * value - time in deciseconds to set the timer for.
  */
 /obj/machinery/status_display/door_timer/proc/set_timer(value)
-	var/new_time = clamp(value, 0, MAX_TIMER)
+	var/new_time = clamp(value, 0, MAX_TIMER + world.time - activation_time)
 	. = new_time == timer_duration //return 1 on no change
 	timer_duration = new_time
 	update_content()
@@ -223,20 +231,20 @@
 		if("time")
 			var/value = text2num(params["adjust"])
 			if(value)
-				. = set_timer(time_left()+value)
-				investigate_log("[key_name(usr)] modified the timer by [value/10] seconds for cell [id], currently [time_left(seconds = TRUE)]", INVESTIGATE_RECORDS)
+				. = set_timer(timer_duration + value)
+				user.investigate_log("modified the timer by [value/10] seconds for cell [id], currently [time_left(seconds = TRUE)]", INVESTIGATE_RECORDS)
 				user.log_message("modified the timer by [value/10] seconds for cell [id], currently [time_left(seconds = TRUE)]", LOG_ATTACK)
 		if("start")
 			timer_start()
-			investigate_log("[key_name(usr)] has started [id]'s timer of [time_left(seconds = TRUE)] seconds", INVESTIGATE_RECORDS)
+			user.investigate_log("has started [id]'s timer of [time_left(seconds = TRUE)] seconds", INVESTIGATE_RECORDS)
 			user.log_message("has started [id]'s timer of [time_left(seconds = TRUE)] seconds", LOG_ATTACK)
 		if("stop")
-			investigate_log("[key_name(usr)] has stopped [id]'s timer of [time_left(seconds = TRUE)] seconds", INVESTIGATE_RECORDS)
-			user.log_message("[key_name(usr)] has stopped [id]'s timer of [time_left(seconds = TRUE)] seconds", LOG_ATTACK)
+			user.investigate_log("has stopped [id]'s timer of [time_left(seconds = TRUE)] seconds", INVESTIGATE_RECORDS)
+			user.log_message("has stopped [id]'s timer of [time_left(seconds = TRUE)] seconds", LOG_ATTACK)
 			timer_end(forced = TRUE)
 		if("flash")
-			investigate_log("[key_name(usr)] has flashed cell [id]", INVESTIGATE_RECORDS)
-			user.log_message("[key_name(usr)] has flashed cell [id]", LOG_ATTACK)
+			user.investigate_log("has flashed cell [id]", INVESTIGATE_RECORDS)
+			user.log_message("has flashed cell [id]", LOG_ATTACK)
 			for(var/datum/weakref/flash_ref as anything in flashers)
 				var/obj/machinery/flasher/flasher = flash_ref.resolve()
 				if(!flasher)
@@ -254,12 +262,23 @@
 				if("long")
 					preset_time = PRESET_LONG
 			. = set_timer(preset_time)
-			investigate_log("[key_name(usr)] set cell [id]'s timer to [preset_time/10] seconds", INVESTIGATE_RECORDS)
+			user.investigate_log("set cell [id]'s timer to [preset_time/10] seconds", INVESTIGATE_RECORDS)
 			user.log_message("set cell [id]'s timer to [preset_time/10] seconds", LOG_ATTACK)
 			if(timing)
 				activation_time = world.time
 		else
 			. = FALSE
+
+/obj/machinery/status_display/door_timer/proc/grey_tide(datum/source, list/grey_tide_areas)
+	SIGNAL_HANDLER
+
+	if(!is_station_level(z))
+		return
+
+	for(var/area_type in grey_tide_areas)
+		if(!istype(get_area(src), area_type))
+			continue
+		timer_end(forced = TRUE)
 
 #undef PRESET_SHORT
 #undef PRESET_MEDIUM

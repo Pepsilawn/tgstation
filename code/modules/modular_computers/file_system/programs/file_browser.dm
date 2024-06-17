@@ -2,10 +2,9 @@
 	filename = "filemanager"
 	filedesc = "File Manager"
 	extended_desc = "This program allows management of files."
-	program_icon_state = "generic"
+	program_open_overlay = "generic"
 	size = 8
-	requires_ntnet = FALSE
-	available_on_ntnet = FALSE
+	program_flags = NONE
 	undeletable = TRUE
 	tgui_id = "NtosFileManager"
 	program_icon = "folder"
@@ -13,11 +12,8 @@
 	var/open_file
 	var/error
 
-/datum/computer_file/program/filemanager/ui_act(action, params)
+/datum/computer_file/program/filemanager/ui_act(action, params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
-	if(.)
-		return
-
 	switch(action)
 		if("PRG_deletefile")
 			var/datum/computer_file/file = computer.find_file_by_name(params["name"])
@@ -61,6 +57,8 @@
 			var/datum/computer_file/F = computer.find_file_by_name(params["name"])
 			if(!F)
 				return
+			if(computer.find_file_by_name(params["name"], computer.inserted_disk))
+				return
 			var/datum/computer_file/C = F.clone(FALSE)
 			computer.inserted_disk.add_file(C)
 			return TRUE
@@ -70,6 +68,8 @@
 			var/datum/computer_file/F = computer.find_file_by_name(params["name"], computer.inserted_disk)
 			if(!F || !istype(F))
 				return
+			if(!computer.can_store_file(F))
+				return FALSE
 			var/datum/computer_file/C = F.clone(FALSE)
 			computer.store_file(C)
 			return TRUE
@@ -80,7 +80,7 @@
 			binary.alert_silenced = !binary.alert_silenced
 
 /datum/computer_file/program/filemanager/ui_data(mob/user)
-	var/list/data = get_header_data()
+	var/list/data = list()
 	if(error)
 		data["error"] = error
 	if(!computer)

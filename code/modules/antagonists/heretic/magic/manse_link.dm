@@ -2,8 +2,9 @@
 	name = "Manse Link"
 	desc = "This spell allows you to pierce through reality and connect minds to one another \
 		via your Mansus Link. All minds connected to your Mansus Link will be able to communicate discreetly across great distances."
-	background_icon_state = "bg_ecult"
-	icon_icon = 'icons/mob/actions/actions_ecult.dmi'
+	background_icon_state = "bg_heretic"
+	overlay_icon_state = "bg_heretic_border"
+	button_icon = 'icons/mob/actions/actions_ecult.dmi'
 	button_icon_state = "mansus_link"
 	ranged_mousepointer = 'icons/effects/mouse_pointers/throw_target.dmi'
 
@@ -13,6 +14,7 @@
 	invocation = "PI'RC' TH' M'ND."
 	invocation_type = INVOCATION_SHOUT
 	spell_requirements = NONE
+	antimagic_flags = MAGIC_RESISTANCE|MAGIC_RESISTANCE_MIND
 
 	cast_range = 7
 
@@ -53,7 +55,7 @@
 	to_chat(owner, span_notice("You begin linking [linkee]'s mind to yours..."))
 	to_chat(linkee, span_warning("You feel your mind being pulled somewhere... connected... intertwined with the very fabric of reality..."))
 
-	if(!do_after(owner, link_time, linkee))
+	if(!do_after(owner, link_time, linkee, hidden = TRUE))
 		to_chat(owner, span_warning("You fail to link to [linkee]'s mind."))
 		to_chat(linkee, span_warning("The foreign presence leaves your mind."))
 		return FALSE

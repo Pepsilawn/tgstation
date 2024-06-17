@@ -1,7 +1,7 @@
 /// An element for atoms that, when dragged and dropped onto a mob, opens a strip panel.
 /datum/element/strippable
 	element_flags = ELEMENT_BESPOKE | ELEMENT_DETACH_ON_HOST_DESTROY
-	id_arg_index = 2
+	argument_hash_start_idx = 2
 
 	/// An assoc list of keys to /datum/strippable_item
 	var/list/items
@@ -14,7 +14,7 @@
 	/// An existing strip menus
 	var/list/strip_menus
 
-/datum/element/strippable/Attach(datum/target, list/items, should_strip_proc_path)
+/datum/element/strippable/Attach(datum/target, list/items = list(), should_strip_proc_path)
 	. = ..()
 	if (!isatom(target))
 		return ELEMENT_INCOMPATIBLE
@@ -38,8 +38,9 @@
 
 	if (user == source)
 		return
-
 	if (over != user)
+		return
+	if(!user.can_perform_action(source, FORBID_TELEKINESIS_REACH))
 		return
 
 	// Cyborgs buckle people by dragging them onto them, unless in combat mode.
@@ -51,21 +52,22 @@
 	if (!isnull(should_strip_proc_path) && !call(source, should_strip_proc_path)(user))
 		return
 
-	var/datum/strip_menu/strip_menu
+	var/datum/strip_menu/strip_menu = LAZYACCESS(strip_menus, source)
 
 	if (isnull(strip_menu))
 		strip_menu = new(source, src)
 		LAZYSET(strip_menus, source, strip_menu)
 
 	INVOKE_ASYNC(strip_menu, TYPE_PROC_REF(/datum/, ui_interact), user)
+	return COMPONENT_CANCEL_MOUSEDROP_ONTO
 
 /// A representation of an item that can be stripped down
 /datum/strippable_item
 	/// The STRIPPABLE_ITEM_* key
 	var/key
 
-	/// Should we warn about dangerous clothing?
-	var/warn_dangerous_clothing = TRUE
+	/// Should we give feedback messages?
+	var/show_visible_message = TRUE
 
 /// Gets the item from the given source.
 /datum/strippable_item/proc/get_item(atom/source)
@@ -82,13 +84,16 @@
 		to_chat(user, span_warning("You can't put [equipping] on [source], it's stuck to your hand!"))
 		return FALSE
 
+	if (equipping.item_flags & ABSTRACT)
+		return FALSE //I don't know a sane-sounding feedback message for trying to put a slap into someone's hand
+
 	return TRUE
 
 /// Start the equipping process. This is the proc you should yield in.
 /// Returns TRUE/FALSE depending on if it is allowed.
 /datum/strippable_item/proc/start_equip(atom/source, obj/item/equipping, mob/user)
 
-	equipping.item_start_equip(source, equipping, user, warn_dangerous_clothing)
+	equipping.item_start_equip(source, equipping, user, show_visible_message)
 	return TRUE
 
 /// The proc that places the item on the source. This should not yield.
@@ -132,7 +137,7 @@
 		ignored_mobs = user,
 	)
 
-	to_chat(user, span_danger("You try to remove [source]'s [item]..."))
+	to_chat(user, span_danger("You try to remove [source]'s [item.name]..."))
 	user.log_message("is stripping [key_name(source)] of [item].", LOG_ATTACK, color="red")
 	source.log_message("is being stripped of [item] by [key_name(user)].", LOG_VICTIM, color="orange", log_globally=FALSE)
 	item.add_fingerprint(src)
@@ -157,18 +162,25 @@
 	SHOULD_NOT_SLEEP(TRUE)
 	return STRIPPABLE_OBSCURING_NONE
 
-/// Returns the ID of this item's strippable action.
-/// Return `null` if there is no alternate action.
-/// Any return value of this must be in StripMenu.
-/datum/strippable_item/proc/get_alternate_action(atom/source, mob/user)
+/**
+ * Returns a list of alternate actions that can be performed on this strippable_item.
+ * All string keys in the list must be inside tgui\packages\tgui\interfaces\StripMenu.tsx
+ * You can also return null if there are no alternate actions.
+ */
+/datum/strippable_item/proc/get_alternate_actions(atom/source, mob/user)
+	RETURN_TYPE(/list)
 	return null
 
-/// Performs an alternative action on this strippable_item.
-/// `has_alternate_action` needs to be TRUE.
-/// Returns FALSE if blocked by signal, TRUE otherwise.
-/datum/strippable_item/proc/alternate_action(atom/source, mob/user)
+/**
+ * Performs an alternate action on this strippable_item.
+ * - source: The source of the action.
+ * - user: The user performing the action.
+ * - action_key: The key of the alternate action to perform.
+ * Returns FALSE if unable to perform the action; whether it be due to the signal or some other factor.
+ */
+/datum/strippable_item/proc/perform_alternate_action(atom/source, mob/user, action_key)
 	SHOULD_CALL_PARENT(TRUE)
-	if(SEND_SIGNAL(user, COMSIG_TRY_ALT_ACTION, source) & COMPONENT_CANT_ALT_ACTION)
+	if(SEND_SIGNAL(user, COMSIG_TRY_ALT_ACTION, source, action_key) & COMPONENT_CANT_ALT_ACTION)
 		return FALSE
 	return TRUE
 
@@ -210,7 +222,7 @@
 	if (!ismob(source))
 		return FALSE
 
-	if (!do_mob(user, source, get_equip_delay(equipping)))
+	if (!do_after(user, get_equip_delay(equipping), source))
 		return FALSE
 
 	if (!equipping.mob_can_equip(source, item_slot, disable_warning = TRUE, bypass_equip_delay_self = TRUE))
@@ -266,8 +278,8 @@
 	source.log_message("had [item] put on them by [key_name(user)].", LOG_VICTIM, color="orange", log_globally=FALSE)
 
 /// A utility function for `/datum/strippable_item`s to start unequipping an item from a mob.
-/proc/start_unequip_mob(obj/item/item, mob/source, mob/user, strip_delay)
-	if (!do_mob(user, source, strip_delay || item.strip_delay, interaction_key = REF(item)))
+/proc/start_unequip_mob(obj/item/item, mob/source, mob/user, strip_delay, hidden = FALSE)
+	if (!do_after(user, strip_delay || item.strip_delay, source, interaction_key = REF(item), hidden = hidden))
 		return FALSE
 
 	return TRUE
@@ -339,7 +351,7 @@
 			continue
 
 		var/obj/item/item = item_data.get_item(owner)
-		if (isnull(item) || (HAS_TRAIT(item, TRAIT_NO_STRIP)))
+		if (isnull(item) || (HAS_TRAIT(item, TRAIT_NO_STRIP) || (item.item_flags & EXAMINE_SKIP)))
 			items[strippable_key] = result
 			continue
 
@@ -347,7 +359,11 @@
 
 		result["icon"] = icon2base64(icon(item.icon, item.icon_state))
 		result["name"] = item.name
-		result["alternate"] = item_data.get_alternate_action(owner, user)
+		result["alternate"] = item_data.get_alternate_actions(owner, user)
+		var/static/list/already_cried = list()
+		if(length(result["alternate"]) > 2 && !(type in already_cried))
+			stack_trace("Too many alternate actions for [type]! Only two are supported at the moment! This will look bad!")
+			already_cried += type
 
 		items[strippable_key] = result
 
@@ -439,6 +455,7 @@
 				strippable_item.finish_unequip(owner, user)
 		if ("alt")
 			var/key = params["key"]
+			var/alt_action = params["alternate_action"]
 			var/datum/strippable_item/strippable_item = strippable.items[key]
 
 			if (isnull(strippable_item))
@@ -454,13 +471,13 @@
 			if (isnull(item))
 				return
 
-			if (isnull(strippable_item.get_alternate_action(owner, user)))
+			if (!(alt_action in strippable_item.get_alternate_actions(owner, user)))
 				return
 
 			LAZYORASSOCLIST(interactions, user, key)
 
 			// Potentially yielding
-			strippable_item.alternate_action(owner, user)
+			strippable_item.perform_alternate_action(owner, user, alt_action)
 
 			LAZYREMOVEASSOC(interactions, user, key)
 

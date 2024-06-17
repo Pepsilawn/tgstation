@@ -5,6 +5,8 @@
 	alert_type = /atom/movable/screen/alert/status_effect/ghoul
 	/// The new max health value set for the ghoul, if supplied
 	var/new_max_health
+	/// What, if any, stamina modifier we applied to the ghoul mob
+	var/stamina_mod_applied
 	/// Reference to the master of the ghoul's mind
 	var/datum/mind/master_mind
 	/// An optional callback invoked when a ghoul is made (on_apply)
@@ -14,8 +16,8 @@
 
 /datum/status_effect/ghoul/Destroy()
 	master_mind = null
-	QDEL_NULL(on_made_callback)
-	QDEL_NULL(on_lost_callback)
+	on_made_callback = null
+	on_lost_callback = null
 	return ..()
 
 /datum/status_effect/ghoul/on_creation(
@@ -48,9 +50,12 @@
 	var/mob/living/carbon/human/human_target = owner
 
 	RegisterSignal(human_target, COMSIG_LIVING_DEATH, PROC_REF(remove_ghoul_status))
-	human_target.revive(full_heal = TRUE, admin_revive = TRUE)
+	human_target.revive(ADMIN_HEAL_ALL) // Have to do an admin heal here, otherwise they'll likely just die due to missing organs or limbs
 
 	if(new_max_health)
+		if(new_max_health < human_target.maxHealth)
+			stamina_mod_applied = (new_max_health / human_target.maxHealth)
+			human_target.physiology.stamina_mod *= stamina_mod_applied
 		human_target.setMaxHealth(new_max_health)
 		human_target.health = new_max_health
 
@@ -62,6 +67,7 @@
 	if(human_target.mind)
 		var/datum/antagonist/heretic_monster/heretic_monster = human_target.mind.add_antag_datum(/datum/antagonist/heretic_monster)
 		heretic_monster.set_owner(master_mind)
+		human_target.mind.remove_antag_datum(/datum/antagonist/cult)
 
 	return TRUE
 
@@ -78,6 +84,8 @@
 	var/mob/living/carbon/human/human_target = owner
 
 	if(new_max_health)
+		if(isnum(stamina_mod_applied))
+			human_target.physiology.stamina_mod /= stamina_mod_applied
 		human_target.setMaxHealth(initial(human_target.maxHealth))
 
 	on_lost_callback?.Invoke(human_target)

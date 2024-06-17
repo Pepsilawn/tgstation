@@ -1,7 +1,7 @@
 import { BooleanLike } from 'common/react';
 
-export type Data = {
-  available: ReadonlyArray<{ name: string; value: number }>;
+export type PaiData = {
+  available: Record<string, number>;
   directives: string;
   door_jack: string | null;
   emagged: BooleanLike;

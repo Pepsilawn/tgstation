@@ -18,6 +18,7 @@
 
 	item_type = /obj/item/stack/sheet/mineral/snow
 	delete_old = FALSE
+	delete_on_failure = FALSE
 
 /datum/mutation/human/cryokinesis
 	name = "Cryokinesis"
@@ -33,12 +34,13 @@
 /datum/action/cooldown/spell/pointed/projectile/cryo
 	name = "Cryobeam"
 	desc = "This power fires a frozen bolt at a target."
-	button_icon_state = "icebeam0"
+	button_icon_state = "icebeam"
+	base_icon_state = "icebeam"
+	active_overlay_icon_state = "bg_spell_border_active_blue"
 	cooldown_time = 16 SECONDS
 	spell_requirements = NONE
 	antimagic_flags = NONE
 
-	base_icon_state = "icebeam"
 	active_msg = "You focus your cryokinesis!"
 	deactive_msg = "You relax."
 	projectile_type = /obj/projectile/temp/cryo

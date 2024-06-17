@@ -5,7 +5,7 @@
  */
 /datum/element/movement_turf_changer
 	element_flags = ELEMENT_BESPOKE
-	id_arg_index = 2
+	argument_hash_start_idx = 2
 	///Path of the turf added on top
 	var/turf_type
 
@@ -26,7 +26,7 @@
 	SIGNAL_HANDLER
 
 	var/turf/destination = target.loc
-	if(!isturf(destination) || istype(destination, turf_type) || isopenspaceturf(destination))
+	if(!isturf(destination) || istype(destination, turf_type) || isgroundlessturf(destination))
 		return
 
-	destination.PlaceOnTop(turf_type)
+	destination.place_on_top(turf_type)

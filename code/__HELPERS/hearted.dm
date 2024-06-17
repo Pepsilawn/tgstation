@@ -32,7 +32,7 @@
 		if(!hearted_mob?.client)
 			continue
 		hearted_mob.client.adjust_heart()
-		message += "[hearted_ckey][i==hearts.len ? "" : ", "]"
+		message += "[hearted_ckey][i == hearts.len ? "" : ", "]"
 	message_admins(message.Join())
 
 /// Ask someone if they'd like to award a commendation for the round, 3 tries to get the name they want before we give up
@@ -54,7 +54,7 @@
 	if(!heart_nominee)
 		return
 
-	heart_nominee = lowertext(heart_nominee)
+	heart_nominee = LOWER_TEXT(heart_nominee)
 	var/list/name_checks = get_mob_by_name(heart_nominee)
 	if(!name_checks || name_checks.len == 0)
 		query_heart(attempt + 1)

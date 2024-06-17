@@ -29,9 +29,13 @@
 	weather_immunities = list(TRAIT_LAVA_IMMUNE, TRAIT_ASHSTORM_IMMUNE)
 	minbodytemp = 0
 	maxbodytemp = INFINITY
-	atmos_requirements = list("min_oxy" = 0, "max_oxy" = 0, "min_plas" = 0, "max_plas" = 0, "min_co2" = 0, "max_co2" = 0, "min_n2" = 0, "max_n2" = 0)
+	atmos_requirements = null
 	loot = list(/obj/effect/decal/remains/human)
 	del_on_death = TRUE
+
+/mob/living/simple_animal/hostile/dark_wizard/Initialize(mapload)
+	. = ..()
+	apply_dynamic_human_appearance(src, mob_spawn_path = /obj/effect/mob_spawn/corpse/human/wizard/dark, r_hand = /obj/item/staff)
 
 /obj/projectile/temp/earth_bolt
 	name = "earth bolt"

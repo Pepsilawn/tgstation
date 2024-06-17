@@ -2,7 +2,7 @@
 
 /obj/item/storage/box/donkpockets
 	name = "box of donk-pockets"
-	desc = "<B>Instructions:</B> <I>Heat in microwave. Product will stay perpetually warmed with cutting edge Donk Co. technology.</I>"
+	desc = "Instructions: Heat in microwave. Product will stay perpetually warmed with cutting edge Donk Co. technology."
 	icon_state = "donkpocketbox"
 	illustration = null
 	/// What type of donk pocket are we gonna cram into this box?
@@ -14,7 +14,7 @@
 
 /obj/item/storage/box/donkpockets/Initialize(mapload)
 	. = ..()
-	atom_storage.set_holdable(list(/obj/item/food/donkpocket))
+	atom_storage.set_holdable(/obj/item/food/donkpocket)
 
 /obj/item/storage/box/donkpockets/donkpocketspicy
 	name = "box of spicy-flavoured donk-pockets"
@@ -49,11 +49,12 @@
 /obj/item/storage/box/papersack
 	name = "paper sack"
 	desc = "A sack neatly crafted out of paper."
+	icon = 'icons/obj/storage/paperbag.dmi'
 	icon_state = "paperbag_None"
 	inhand_icon_state = null
 	illustration = null
 	resistance_flags = FLAMMABLE
-	foldable = null
+	foldable_result = null
 	/// A list of all available papersack reskins
 	var/list/papersack_designs = list()
 	///What design from papersack_designs we are currently using.
@@ -93,16 +94,16 @@
 			desc = "A paper sack with a crude smile etched onto the side."
 	return ..()
 
-/obj/item/storage/box/papersack/attackby(obj/item/attacking_item, mob/user, params)
-	if(istype(attacking_item, /obj/item/pen))
-		var/choice = show_radial_menu(user, src , papersack_designs, custom_check = CALLBACK(src, PROC_REF(check_menu), user, attacking_item), radius = 36, require_near = TRUE)
+/obj/item/storage/box/papersack/storage_insert_on_interacted_with(datum/storage, obj/item/inserted, mob/living/user)
+	if(istype(inserted, /obj/item/pen))
+		var/choice = show_radial_menu(user, src , papersack_designs, custom_check = CALLBACK(src, PROC_REF(check_menu), user, inserted), radius = 36, require_near = TRUE)
 		if(!choice || choice == design_choice)
 			return FALSE
 		design_choice = choice
 		balloon_alert(user, "modified")
 		update_appearance()
 		return FALSE
-	if(attacking_item.get_sharpness() && !contents.len)
+	if(inserted.get_sharpness() && !contents.len)
 		if(design_choice == "None")
 			user.show_message(span_notice("You cut eyeholes into [src]."), MSG_VISUAL)
 			new /obj/item/clothing/head/costume/papersack(drop_location())
@@ -113,7 +114,7 @@
 			new /obj/item/clothing/head/costume/papersack/smiley(drop_location())
 			qdel(src)
 			return FALSE
-	return ..()
+	return TRUE
 
 /**
  * check_menu: Checks if we are allowed to interact with a radial menu
@@ -141,6 +142,13 @@
 /obj/item/storage/box/papersack/meat/PopulateContents()
 	for(var/i in 1 to 7)
 		new /obj/item/food/meat/slab(src)
+
+/obj/item/storage/box/papersack/wheat
+	desc = "It's a bit dusty, and smells like a barnyard."
+
+/obj/item/storage/box/papersack/wheat/PopulateContents()
+	for(var/i in 1 to 7)
+		new /obj/item/food/grown/wheat(src)
 
 /obj/item/storage/box/ingredients //This box is for the randomly chosen version the chef used to spawn with, it shouldn't actually exist.
 	name = "ingredients box"
@@ -260,7 +268,7 @@
 		new /obj/item/food/grown/oat(src)
 	new /obj/item/food/grown/cocoapod(src)
 	new /obj/item/food/grown/wheat(src)
-	new /obj/item/reagent_containers/honeycomb(src)
+	new /obj/item/food/honeycomb(src)
 	new /obj/item/seeds/poppy(src)
 
 /obj/item/storage/box/ingredients/carnivore
@@ -305,30 +313,31 @@
 	new /obj/item/food/grown/onion/red(src)
 	new /obj/item/food/grown/onion/red(src)
 	new /obj/item/food/grown/tomato(src)
-	new /obj/item/reagent_containers/condiment/quality_oil(src)
+	new /obj/item/reagent_containers/condiment/olive_oil(src)
 
 /obj/item/storage/box/ingredients/random
 	theme_name = "random"
 	desc = "This box should not exist, contact the proper authorities."
 
 /obj/item/storage/box/ingredients/random/Initialize(mapload)
-	.=..()
+	. = ..()
 	var/chosen_box = pick(subtypesof(/obj/item/storage/box/ingredients) - /obj/item/storage/box/ingredients/random)
 	new chosen_box(loc)
 	return INITIALIZE_HINT_QDEL
 
 /obj/item/storage/box/gum
 	name = "bubblegum packet"
-	desc = "The packaging is entirely in japanese, apparently. You can't make out a single word of it."
+	desc = "The packaging is entirely in Japanese, apparently. You can't make out a single word of it."
+	icon = 'icons/obj/storage/gum.dmi'
 	icon_state = "bubblegum_generic"
 	w_class = WEIGHT_CLASS_TINY
 	illustration = null
-	foldable = null
+	foldable_result = null
 	custom_price = PAYCHECK_CREW
 
 /obj/item/storage/box/gum/Initialize(mapload)
 	. = ..()
-	atom_storage.set_holdable(list(/obj/item/food/bubblegum))
+	atom_storage.set_holdable(/obj/item/food/bubblegum)
 	atom_storage.max_slots = 4
 
 /obj/item/storage/box/gum/PopulateContents()
@@ -419,9 +428,9 @@
 /obj/item/storage/box/tiziran_cans/PopulateContents()
 	for(var/i in 1 to 8)
 		var/random_food = pick_weight(list(
-			/obj/item/food/canned_jellyfish = 5,
-			/obj/item/food/desert_snails = 5,
-			/obj/item/food/larvae = 5,
+			/obj/item/food/canned/jellyfish = 5,
+			/obj/item/food/canned/desert_snails = 5,
+			/obj/item/food/canned/larvae = 5,
 			))
 		new random_food(src)
 
@@ -457,7 +466,7 @@
 			/obj/item/food/cheese/wheel = 5,
 			/obj/item/food/grown/toechtauese = 10,
 			/obj/item/reagent_containers/condiment/cornmeal = 5,
-			/obj/item/reagent_containers/condiment/quality_oil = 5,
+			/obj/item/reagent_containers/condiment/olive_oil = 5,
 			/obj/item/reagent_containers/condiment/yoghurt = 5,
 			))
 		new random_food(src)
@@ -487,3 +496,29 @@
 /obj/item/storage/box/condimentbottles/PopulateContents()
 	for(var/i in 1 to 6)
 		new /obj/item/reagent_containers/condiment(src)
+
+
+/obj/item/storage/box/coffeepack
+	icon_state = "arabica_beans"
+	name = "arabica beans"
+	desc = "A bag containing fresh, dry coffee arabica beans. Ethically sourced and packaged by Waffle Corp."
+	illustration = null
+	icon = 'icons/obj/food/containers.dmi'
+	var/beantype = /obj/item/food/grown/coffee
+
+/obj/item/storage/box/coffeepack/Initialize(mapload)
+	. = ..()
+	atom_storage.set_holdable(/obj/item/food/grown/coffee)
+
+/obj/item/storage/box/coffeepack/PopulateContents()
+	atom_storage.max_slots = 5
+	for(var/i in 1 to 5)
+		var/obj/item/food/grown/coffee/bean = new beantype(src)
+		ADD_TRAIT(bean, TRAIT_DRIED, ELEMENT_TRAIT(type))
+		bean.add_atom_colour(COLOR_DRIED_TAN, FIXED_COLOUR_PRIORITY) //give them the tan just like from the drying rack
+
+/obj/item/storage/box/coffeepack/robusta
+	icon_state = "robusta_beans"
+	name = "robusta beans"
+	desc = "A bag containing fresh, dry coffee robusta beans. Ethically sourced and packaged by Waffle Corp."
+	beantype = /obj/item/food/grown/coffee/robusta

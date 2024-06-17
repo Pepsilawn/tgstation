@@ -7,7 +7,6 @@
 	total_positions = 1
 	spawn_positions = 1
 	supervisors = SUPERVISOR_HOP
-	selection_color = "#bbe291"
 	config_tag = "CURATOR"
 	exp_granted_type = EXP_TYPE_CREW
 
@@ -32,7 +31,7 @@
 
 	family_heirlooms = list(/obj/item/pen/fountain, /obj/item/storage/dice)
 
-	job_flags = JOB_ANNOUNCE_ARRIVAL | JOB_CREW_MANIFEST | JOB_EQUIP_RANK | JOB_CREW_MEMBER | JOB_NEW_PLAYER_JOINABLE | JOB_REOPEN_ON_ROUNDSTART_LOSS | JOB_ASSIGN_QUIRKS | JOB_CAN_BE_INTERN
+	job_flags = STATION_JOB_FLAGS
 
 	voice_of_god_silence_power = 3
 	rpg_title = "Veteran Adventurer"
@@ -47,7 +46,7 @@
 		/obj/item/barcodescanner = 1,
 		/obj/item/choice_beacon/hero = 1,
 	)
-	belt = /obj/item/modular_computer/tablet/pda/curator
+	belt = /obj/item/modular_computer/pda/curator
 	ears = /obj/item/radio/headset/headset_srv
 	shoes = /obj/item/clothing/shoes/laceup
 	l_pocket = /obj/item/laser_pointer/green
@@ -62,5 +61,5 @@
 	if(visualsOnly)
 		return
 
-	translator.grant_all_languages(source=LANGUAGE_CURATOR)
+	translator.grant_all_languages(source = LANGUAGE_CURATOR)
 	translator.remove_blocked_language(GLOB.all_languages, source=LANGUAGE_ALL)

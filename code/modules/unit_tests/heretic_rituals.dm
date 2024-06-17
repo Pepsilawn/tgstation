@@ -14,7 +14,7 @@
 
 	// Gotta create ourselves a rune and a user to start.
 	var/obj/effect/heretic_rune/big/our_rune = allocate(/obj/effect/heretic_rune/big)
-	var/mob/living/carbon/human/our_heretic = allocate(/mob/living/carbon/human)
+	var/mob/living/carbon/human/our_heretic = allocate(/mob/living/carbon/human/consistent)
 	// -- Note for the human dummy we create:
 	// The user does not actually NEED a heretic antag datum for the type of rituals we're testing,
 	// so we don't give them one here. The heretic antag datum has side effects when applied,
@@ -63,8 +63,13 @@
 		var/list/created_atoms = list()
 		for(var/ritual_item_path in knowledge.required_atoms)
 			var/amount_to_create = knowledge.required_atoms[ritual_item_path]
+			if(islist(ritual_item_path))
+				ritual_item_path = pick(ritual_item_path)
 			for(var/i in 1 to amount_to_create)
-				created_atoms += new ritual_item_path(get_turf(our_heretic))
+				var/obj/item/item = new ritual_item_path(get_turf(our_heretic))
+				if(isitem(item))
+					item.item_flags &= ~ABSTRACT
+				created_atoms += item
 
 		// Now, we can ACTUALLY run the ritual. Let's do it.
 		// Attempt to run the knowledge via the sacrifice rune.
@@ -104,6 +109,10 @@
 		for(var/atom/thing as anything in nearby_atoms)
 			if(!ismovable(thing))
 				continue
+			if(isitem(thing))
+				var/obj/item/item = thing
+				if(item.item_flags & ABSTRACT) //bodyparts and stuff will get registered otherwise
+					continue
 
 			// There are atoms around the rune still, and there shouldn't be.
 			// All component atoms were consumed, and all resulting atoms were cleaned up.

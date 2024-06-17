@@ -6,7 +6,6 @@
 	total_positions = 5
 	spawn_positions = 3
 	supervisors = SUPERVISOR_RD
-	selection_color = "#ffeeff"
 	exp_requirements = 60
 	exp_required_type = EXP_TYPE_CREW
 	exp_granted_type = EXP_TYPE_CREW
@@ -30,11 +29,12 @@
 
 	mail_goodies = list(
 		/obj/item/raw_anomaly_core/random = 10,
-		/obj/item/disk/tech_disk/spaceloot = 2,
-		/obj/item/camera_bug = 1
+		/obj/item/disk/design_disk/bepis = 2,
 	)
 	rpg_title = "Thaumaturgist"
-	job_flags = JOB_ANNOUNCE_ARRIVAL | JOB_CREW_MANIFEST | JOB_EQUIP_RANK | JOB_CREW_MEMBER | JOB_NEW_PLAYER_JOINABLE | JOB_REOPEN_ON_ROUNDSTART_LOSS | JOB_ASSIGN_QUIRKS | JOB_CAN_BE_INTERN
+	job_flags = STATION_JOB_FLAGS
+
+	job_tone = "boom"
 
 
 /datum/outfit/job/scientist
@@ -44,13 +44,14 @@
 	id_trim = /datum/id_trim/job/scientist
 	uniform = /obj/item/clothing/under/rank/rnd/scientist
 	suit = /obj/item/clothing/suit/toggle/labcoat/science
-	belt = /obj/item/modular_computer/tablet/pda/science
+	belt = /obj/item/modular_computer/pda/science
 	ears = /obj/item/radio/headset/headset_sci
 	shoes = /obj/item/clothing/shoes/sneakers/white
 
 	backpack = /obj/item/storage/backpack/science
 	satchel = /obj/item/storage/backpack/satchel/science
 	duffelbag = /obj/item/storage/backpack/duffelbag/science
+	messenger = /obj/item/storage/backpack/messenger/science
 
 /datum/outfit/job/scientist/pre_equip(mob/living/carbon/human/H)
 	..()

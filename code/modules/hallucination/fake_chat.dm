@@ -28,9 +28,15 @@
 	var/is_radio = !speaker || force_radio
 	if(is_radio)
 		var/list/humans = list()
-		for(var/mob/living/carbon/human/existing_human in GLOB.alive_mob_list)
-			humans += existing_human
-		speaker = pick(humans)
+
+		for(var/datum/mind/crew_mind in get_crewmember_minds())
+			if(crew_mind.current)
+				humans += crew_mind.current
+		if(humans.len)
+			speaker = pick(humans)
+
+	if(!speaker)
+		return
 
 	// Time to generate a message.
 	// Spans of our message
@@ -75,13 +81,13 @@
 	// Display the message
 	if(!is_radio && !plus_runechat)
 		var/image/speech_overlay = image('icons/mob/effects/talk.dmi', speaker, "default0", layer = ABOVE_MOB_LAYER)
-		INVOKE_ASYNC(GLOBAL_PROC, GLOBAL_PROC_REF(flick_overlay), speech_overlay, list(hallucinator.client), 30)
+		INVOKE_ASYNC(GLOBAL_PROC, GLOBAL_PROC_REF(flick_overlay_global), speech_overlay, list(hallucinator.client), 30)
 
 	if(plus_runechat)
 		hallucinator.create_chat_message(speaker, understood_language, chosen, spans)
 
 	// And actually show them the message, for real.
-	var/message = hallucinator.compose_message(speaker, understood_language, chosen, is_radio ? "[FREQ_COMMON]" : null, spans, face_name = TRUE)
+	var/message = hallucinator.compose_message(speaker, understood_language, chosen, is_radio ? "[FREQ_COMMON]" : null, spans, visible_name = TRUE)
 	to_chat(hallucinator, message)
 
 	// Then clean up.

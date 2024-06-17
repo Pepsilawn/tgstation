@@ -7,7 +7,7 @@
 
 /obj/item/storage/box/gloves/PopulateContents()
 	for(var/i in 1 to 7)
-		new /obj/item/clothing/gloves/color/latex(src)
+		new /obj/item/clothing/gloves/latex(src)
 
 /obj/item/storage/box/masks
 	name = "box of sterile masks"
@@ -27,6 +27,16 @@
 	for(var/i in 1 to 7)
 		new /obj/item/clothing/glasses/regular(src)
 
+/obj/item/storage/box/tape_wizard
+	name = "Tape Wizard - Episode 23"
+	desc = "A box containing the costume used by legendary entertainment icon 'Super Tape Wizard'. It got a little stuck on its way out."
+
+/obj/item/storage/box/tape_wizard/PopulateContents()
+	new /obj/item/clothing/head/wizard/tape/fake(src)
+	new /obj/item/clothing/suit/wizrobe/tape/fake(src)
+	new /obj/item/staff/tape(src)
+	new /obj/item/stack/sticky_tape(src)
+
 /obj/item/storage/box/fakesyndiesuit
 	name = "boxed space suit and helmet"
 	desc = "A sleek, sturdy box used to hold replica spacesuits."
@@ -37,10 +47,14 @@
 	new /obj/item/clothing/head/syndicatefake(src)
 	new /obj/item/clothing/suit/syndicatefake(src)
 
-/obj/item/storage/box/syndie_kit/space_dragon/PopulateContents()
-	new /obj/item/dna_probe/carp_scanner(src)
-	new /obj/item/clothing/suit/hooded/carp_costume/spaceproof/old(src)
-	new /obj/item/clothing/mask/gas/carp(src)
+/obj/item/storage/box/syndie_kit/battle_royale
+	name = "rumble royale broadcast kit"
+	desc = "Contains everything you need to host the galaxy's greatest show; Rumble Royale."
+
+/obj/item/storage/box/syndie_kit/battle_royale/PopulateContents()
+	var/obj/item/royale_implanter/implanter = new(src)
+	var/obj/item/royale_remote/remote = new(src)
+	remote.link_implanter(implanter)
 
 /obj/item/storage/box/deputy
 	name = "box of deputy armbands"
@@ -94,11 +108,11 @@
 	new /obj/item/storage/box/papersack/meat(src)
 
 /obj/item/storage/box/hero/mothpioneer
-	name = "Mothic Fleet Pioneer - 2100's."
+	name = "Mothic Fleet Pioneer - 2429."
 	desc = "Some claim that the fleet engineers are directly responsible for most modern advancements in spacefaring designs. Although the exact details of their past contributions are somewhat fuzzy, their ingenuity remains unmatched and unquestioned to this day."
 
 /obj/item/storage/box/hero/mothpioneer/PopulateContents()
-	new /obj/item/clothing/head/mothcap(src)
+	new /obj/item/clothing/head/mothcap/original(src)
 	new /obj/item/clothing/suit/mothcoat/original(src)
 	new /obj/item/crowbar(src)
 	new /obj/item/flashlight/lantern(src)
@@ -118,6 +132,9 @@
 
 /obj/item/storage/box/holy
 	name = "Templar Kit"
+	/// This item is used to generate a preview image for this set.
+	/// It could be any item, doesn't even necessarily need to be something in the kit
+	var/obj/item/typepath_for_preview = /obj/item/clothing/suit/chaplainsuit/armor/templar
 
 /obj/item/storage/box/holy/PopulateContents()
 	new /obj/item/clothing/head/helmet/chaplain(src)
@@ -125,6 +142,7 @@
 
 /obj/item/storage/box/holy/clock
 	name = "Forgotten kit"
+	typepath_for_preview = /obj/item/clothing/suit/chaplainsuit/armor/clock
 
 /obj/item/storage/box/holy/clock/PopulateContents()
 	new /obj/item/clothing/head/helmet/chaplain/clock(src)
@@ -132,6 +150,7 @@
 
 /obj/item/storage/box/holy/student
 	name = "Profane Scholar Kit"
+	typepath_for_preview = /obj/item/clothing/suit/chaplainsuit/armor/studentuni
 
 /obj/item/storage/box/holy/student/PopulateContents()
 	new /obj/item/clothing/suit/chaplainsuit/armor/studentuni(src)
@@ -139,6 +158,7 @@
 
 /obj/item/storage/box/holy/sentinel
 	name = "Stone Sentinel Kit"
+	typepath_for_preview = /obj/item/clothing/suit/chaplainsuit/armor/ancient
 
 /obj/item/storage/box/holy/sentinel/PopulateContents()
 	new /obj/item/clothing/suit/chaplainsuit/armor/ancient(src)
@@ -146,6 +166,7 @@
 
 /obj/item/storage/box/holy/witchhunter
 	name = "Witchhunter Kit"
+	typepath_for_preview = /obj/item/clothing/suit/chaplainsuit/armor/witchhunter
 
 /obj/item/storage/box/holy/witchhunter/PopulateContents()
 	new /obj/item/clothing/suit/chaplainsuit/armor/witchhunter(src)
@@ -153,6 +174,7 @@
 
 /obj/item/storage/box/holy/adept
 	name = "Divine Adept Kit"
+	typepath_for_preview = /obj/item/clothing/suit/chaplainsuit/armor/adept
 
 /obj/item/storage/box/holy/adept/PopulateContents()
 	new /obj/item/clothing/suit/chaplainsuit/armor/adept(src)
@@ -160,6 +182,7 @@
 
 /obj/item/storage/box/holy/follower
 	name = "Followers of the Chaplain Kit"
+	typepath_for_preview = /obj/item/clothing/suit/hooded/chaplain_hoodie/leader
 
 /obj/item/storage/box/holy/follower/PopulateContents()
 	new /obj/item/clothing/suit/hooded/chaplain_hoodie(src)
@@ -168,3 +191,35 @@
 	new /obj/item/clothing/suit/hooded/chaplain_hoodie(src)
 	new /obj/item/clothing/suit/hooded/chaplain_hoodie/leader(src)
 
+/obj/item/storage/box/holy/divine_archer
+	name = "Divine Archer Kit"
+	typepath_for_preview = /obj/item/clothing/suit/hooded/chaplain_hoodie/divine_archer
+
+/obj/item/storage/box/holy/divine_archer/PopulateContents()
+	new /obj/item/clothing/under/rank/civilian/chaplain/divine_archer(src)
+	new /obj/item/clothing/suit/hooded/chaplain_hoodie/divine_archer(src)
+	new /obj/item/clothing/gloves/divine_archer(src)
+	new /obj/item/clothing/shoes/divine_archer(src)
+
+/obj/item/storage/box/floor_camo
+	name = "floor tile camo box"
+	desc = "Thank you for shopping from Camo-J's, our uniquely designed \
+		floor-tile 'NT scum' styled camouflage fatigues is the ultimate \
+		espionage uniform used by the very best. Providing the best \
+		flexibility, with our latest Camo-tech threads. Perfect for \
+		risky-espionage hallway operations. Enjoy our product!"
+
+/obj/item/storage/box/floor_camo/PopulateContents()
+	new /obj/item/clothing/under/syndicate/floortilecamo(src)
+	new /obj/item/clothing/mask/floortilebalaclava(src)
+	new /obj/item/clothing/gloves/combat/floortile(src)
+	new /obj/item/clothing/shoes/jackboots/floortile(src)
+	new /obj/item/storage/backpack/floortile(src)
+
+/obj/item/storage/box/collar_bomb
+	name = "collar bomb box"
+	desc = "A small print on the back reads 'For research purposes only. Handle with care. In case of emergency, call the following number:'... the rest is scratched out with a marker..."
+
+/obj/item/storage/box/collar_bomb/PopulateContents()
+	var/obj/item/collar_bomb_button/button = new(src)
+	new /obj/item/clothing/neck/collar_bomb(src, button)
