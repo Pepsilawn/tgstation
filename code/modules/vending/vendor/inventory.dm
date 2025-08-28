@@ -93,6 +93,13 @@
  */
 /obj/machinery/vending/proc/restock(obj/item/vending_refill/canister)
 	. = 0
+
+	//to initialize product category & cargo ordered canisters for the 1st time
+	if(!canister.products)
+		canister.products = products.Copy()
+		canister.contraband = contraband.Copy()
+		canister.premium = premium.Copy()
+
 	var/list/datum/data/vending_product/record_list
 	var/list/canister_list
 
@@ -154,7 +161,7 @@
 		speak("Sold out of [item_record.name].")
 		flick(icon_deny, src)
 		return
-	if(onstation)
+	if(!all_products_free)
 		// Here we do additional handing ahead of the payment component's logic, such as age restrictions and additional logging
 		var/obj/item/card/id/card_used
 		var/mob/living/living_user
