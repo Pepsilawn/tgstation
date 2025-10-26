@@ -2,6 +2,8 @@
 //Food
 
 // Eating stuff
+/// From datum/component/edible/proc/TakeBite: (atom/owner)
+#define COMSIG_LIVING_EAT_FOOD "food_bit"
 /// From datum/component/edible/proc/TakeBite: (mob/living/eater, mob/feeder, bitecount, bitesize)
 #define COMSIG_FOOD_EATEN "food_eaten"
 	#define DESTROY_FOOD (1<<0)
@@ -71,6 +73,9 @@
 #define COMSIG_ITEM_BAKED "item_bake_completed"
 ///Sent to the newly spawned object when it's baked in an oven.
 #define COMSIG_ITEM_BAKED_RESULT "item_baked_result"
+
+///Called on the result spawned during decomposition: (obj/decomposed)
+#define COMSIG_OBJ_DECOMPOSITION_RESULT "obj_decomposition_result"
 
 //Drink
 
